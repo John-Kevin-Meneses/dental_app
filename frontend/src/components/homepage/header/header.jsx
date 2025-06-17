@@ -35,7 +35,7 @@ const Header = () => {
           <ul>
             <li><a href="#" className="active">Home</a></li>
             <li><a href="#services">Services</a></li>
-            <li><a href="#contact">Contact</a></li>
+            <li><a href="#contact">Contact Us</a></li>
           </ul>
           <i className="mobile-nav-toggle d-xl-none bi bi-list" />
         </nav>
