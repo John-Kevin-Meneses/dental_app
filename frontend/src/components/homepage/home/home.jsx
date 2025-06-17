@@ -2,6 +2,7 @@ import React from 'react'
 import "./home.css"
 import "./contents/main_page"
 import Main from './contents/main_page'
+import Services from './contents/services'
 import 'aos/dist/aos.css';
 
 const home = () => {
@@ -12,12 +13,11 @@ const home = () => {
         <div className="container">
           <div className="row d-flex justify-content-center text-center">
             <Main/>
+            <Services/>
           </div>
         </div>
       </div>
-    </div>
-    
-    
+    </div>   
   </main>
 
   )

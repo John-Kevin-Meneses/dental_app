@@ -24,7 +24,12 @@ const Header = () => {
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
         >
-          <h1 className="sitename">iDental</h1>
+        <img
+          src="/assets/img/favicon.svg"
+          alt="iDental Logo"
+          style={{ height: "32px", marginRight: "8px" }}
+        />
+        <h1 className="sitename mb-0">iDental</h1>
         </a>
         <nav id="navmenu" className="navmenu">
           <ul>

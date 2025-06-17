@@ -17,14 +17,14 @@ function Main() {
                 <div className="icon-circle me-2">
                   <i className="bi bi-bell"></i>
                 </div>
-                <span className="badge-text me-3">Innovative Solutions</span>
+                <span className="badge-text me-3">iDental Inc.</span>
               </div>
             </div>
             <h1 className="hero-title mb-4">
-              Accelerating business growth through innovative technology
+              For The Smile You Deserve
             </h1>
             <p className="hero-description mb-4">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas varius tortor nibh, sit amet tempor nibh finibus et. Aenean eu enim justo.
+              At iDental Inc., we combine compassionate care with cutting-edge dental technology to deliver precise, comfortable, and personalized treatments—giving you every reason to smile with confidence.
             </p>
             <div className="cta-wrapper">
               <a href="#" className="btn btn-primary">Discover More</a>
@@ -32,7 +32,7 @@ function Main() {
           </div>
           <div className="col-lg-6">
             <div className="hero-image">
-              <img src="assets/img/illustration/illustration-16.webp" alt="Business Growth" className="img-fluid" loading="lazy" />
+              <img src="assets/img/illustration/cosmetic-dentist-smile.jpg" alt="Dentist" className="img-fluid" loading="lazy" />
             </div>
           </div>
         </div>
@@ -40,12 +40,12 @@ function Main() {
           <div className="col-lg-4 mb-4 mb-lg-0" data-aos="fade-up" data-aos-delay="200">
             <div className="feature-box">
               <div className="feature-icon me-sm-4 mb-3 mb-sm-0">
-                <i className="bi bi-gear"></i>
+                <i className="bi bi-clock"></i>
               </div>
               <div className="feature-content">
-                <h3 className="feature-title">Rapid Deployment</h3>
+                <h3 className="feature-title">Extended or Flexible Hours</h3>
                 <p className="feature-text">
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut elit tellus, luctus nec ullamcorper mattis.
+                  Open early, late, or on weekends. Emergency dental services.
                 </p>
               </div>
             </div>
@@ -53,12 +53,12 @@ function Main() {
           <div className="col-lg-4 mb-4 mb-lg-0" data-aos="fade-up" data-aos-delay="300">
             <div className="feature-box">
               <div className="feature-icon me-sm-4 mb-3 mb-sm-0">
-                <i className="bi bi-window"></i>
+                <i className="bi bi-currency-dollar"></i>
               </div>
               <div className="feature-content">
-                <h3 className="feature-title">Advanced Security</h3>
+                <h3 className="feature-title">Affordable Service</h3>
                 <p className="feature-text">
-                  Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+                 Offer transparent pricing with no hidden fees and include discounts for students, seniors, or families.
                 </p>
               </div>
             </div>
@@ -66,12 +66,12 @@ function Main() {
           <div className="col-lg-4" data-aos="fade-up" data-aos-delay="400">
             <div className="feature-box">
               <div className="feature-icon me-sm-4 mb-3 mb-sm-0">
-                <i className="bi bi-headset"></i>
+                <i className="bi bi-motherboard"></i>
               </div>
               <div className="feature-content">
-                <h3 className="feature-title">Dedicated Support</h3>
+                <h3 className="feature-title">Modern Technology and Techniques</h3>
                 <p className="feature-text">
-                  Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                  Use of digital X-rays, 3D scans, laser treatments, and other advanced technologies.
                 </p>
               </div>
             </div>
