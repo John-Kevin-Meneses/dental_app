@@ -3,6 +3,7 @@ import "./home.css"
 import "./contents/main_page"
 import Main from './contents/main_page'
 import Services from './contents/services'
+import Contacts from './contents/contacts'
 import 'aos/dist/aos.css';
 
 const home = () => {
@@ -14,6 +15,7 @@ const home = () => {
           <div className="row d-flex justify-content-center text-center">
             <Main/>
             <Services/>
+            <Contacts/>
           </div>
         </div>
       </div>

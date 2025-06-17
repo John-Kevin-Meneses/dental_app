@@ -29,11 +29,11 @@ const Header = () => {
           alt="iDental Logo"
           style={{ height: "32px", marginRight: "8px" }}
         />
-        <h1 className="sitename mb-0">iDental</h1>
+        <h1 className="sitename mb-0">iDental Inc.</h1>
         </a>
         <nav id="navmenu" className="navmenu">
           <ul>
-            <li><a href="#header" className="active">Home</a></li>
+            <li><a href="#" className="active">Home</a></li>
             <li><a href="#services">Services</a></li>
             <li><a href="#contact">Contact</a></li>
           </ul>
