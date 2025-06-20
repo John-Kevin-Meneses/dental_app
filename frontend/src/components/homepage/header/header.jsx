@@ -39,7 +39,7 @@ const Header = () => {
           </ul>
           <i className="mobile-nav-toggle d-xl-none bi bi-list" />
         </nav>
-        <a className="btn-getstarted" href="#book">Book Online</a>
+        <a className="btn-getstarted" href="/login">Book Online</a>
       </div>
     </header>
   );
