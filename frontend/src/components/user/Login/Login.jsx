@@ -1,30 +1,189 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Navigate, Link } from 'react-router-dom';
+import apiService from '../../../services/api'; // Using the imported apiService directly
 import './Login.css';
-import { useLoginActions } from '../../../widgets/user/login/actions';
 
 function Login({ isLoggedIn }) {
-  
-  const {
-    activeTab,
-    showForgotPassword,
-    passwordVisible,
-    formData,
-    errors,
-    showSuccessPopup,
-    setActiveTab,
-    setShowForgotPassword,
-    handleBlur,
-    toggleVisibility,
-    handleChange,
-    handleSubmit,
-    handleForgotPassword
-  } = useLoginActions();
+  const [activeTab, setActiveTab] = React.useState('login');
+  const [showForgotPassword, setShowForgotPassword] = React.useState(false);
+  const [passwordVisible, setPasswordVisible] = React.useState({
+    login: false,
+    register: false,
+    confirm: false
+  });
+  const [formData, setFormData] = React.useState({
+    email: '',
+    password: '',
+    regEmail: '',
+    regPassword: '',
+    regConfirm: '',
+    forgotEmail: '',
+    rememberMe: false,
+    agreeTerms: false
+  });
+  const [errors, setErrors] = React.useState({});
+  const [showSuccessPopup, setShowSuccessPopup] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [passwordStrength, setPasswordStrength] = React.useState({
+    score: 0,
+    feedback: { suggestions: [] }
+  });
+
+  const validateEmail = (email) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(String(email).toLowerCase());
+  };
+
+  const handleEmailValidation = (field, value) => {
+    if (!value) {
+      setErrors(prev => ({ ...prev, [field]: 'Email is required' }));
+      return false;
+    } else if (!validateEmail(value)) {
+      setErrors(prev => ({ ...prev, [field]: 'Please enter a valid email address' }));
+      return false;
+    } else {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+      return true;
+    }
+  };
+
+  const checkPasswordMatch = () => {
+    if (formData.regPassword && formData.regConfirm && 
+        formData.regPassword !== formData.regConfirm) {
+      setErrors(prev => ({ ...prev, passwordMatch: 'Passwords do not match' }));
+      return false;
+    } else {
+      setErrors(prev => ({ ...prev, passwordMatch: '' }));
+      return true;
+    }
+  };
+
+  const handleBlur = (e) => {
+    const { id, value } = e.target;
+    if (id === 'email' || id === 'regEmail' || id === 'forgotEmail') {
+      handleEmailValidation(id, value);
+    } else if (id === 'regConfirm') {
+      checkPasswordMatch();
+    }
+  };
+
+  const toggleVisibility = (field) => {
+    setPasswordVisible(prev => ({ ...prev, [field]: !prev[field] }));
+  };
+
+  const handleChange = (e) => {
+    const { id, type, checked, value } = e.target;
+    const val = type === 'checkbox' ? checked : value;
+    
+    setFormData(prev => ({
+      ...prev,
+      [id]: val
+    }));
+    
+    if (errors[id]) {
+      setErrors(prev => ({ ...prev, [id]: '' }));
+    }
+    
+    if ((id === 'regPassword' || id === 'regConfirm') && 
+        formData.regPassword && formData.regConfirm) {
+      checkPasswordMatch();
+    }
+  };
+
+  const calculatePasswordStrength = (password) => {
+    // In a real app, you would use zxcvbn or similar library
+    const score = Math.min(Math.floor(password.length / 3), 4);
+    setPasswordStrength({
+      score,
+      feedback: { suggestions: [] }
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    let isValid = true;
+    
+    if (activeTab === 'login') {
+      isValid = handleEmailValidation('email', formData.email) && isValid;
+      if (!formData.password) {
+        setErrors(prev => ({ ...prev, password: 'Password is required' }));
+        isValid = false;
+      }
+    } else {
+      isValid = handleEmailValidation('regEmail', formData.regEmail) && isValid;
+      if (!formData.regPassword) {
+        setErrors(prev => ({ ...prev, regPassword: 'Password is required' }));
+        isValid = false;
+      }
+      isValid = checkPasswordMatch() && isValid;
+      if (!formData.agreeTerms) {
+        setErrors(prev => ({ ...prev, agreeTerms: 'You must agree to the terms' }));
+        isValid = false;
+      }
+    }
+
+    if (isValid) {
+      setIsLoading(true);
+      try {
+        if (activeTab === 'login') {
+          const response = await apiService.login({ // Using apiService directly
+            email: formData.email,
+            password: formData.password,
+            rememberMe: formData.rememberMe
+          });
+          localStorage.setItem('token', response.data.token);
+          window.location.href = '/user';
+        } else {
+          await apiService.register({ // Using apiService directly
+            email: formData.regEmail,
+            password: formData.regPassword
+          });
+          setShowSuccessPopup(true);
+          setTimeout(() => {
+            setActiveTab('login');
+            setShowSuccessPopup(false);
+          }, 3000);
+        }
+      } catch (error) {
+        setErrors({ form: error.response?.data?.message || 'An error occurred. Please try again.' });
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    const isValid = handleEmailValidation('forgotEmail', formData.forgotEmail);
+    
+    if (isValid) {
+      setIsLoading(true);
+      try {
+        await apiService.forgotPassword({ email: formData.forgotEmail }); // Using apiService directly
+        setShowSuccessPopup(true);
+        setTimeout(() => {
+          setShowForgotPassword(false);
+          setShowSuccessPopup(false);
+          setFormData(prev => ({ ...prev, forgotEmail: '' }));
+        }, 3000);
+      } catch (error) {
+        setErrors({ forgotEmail: error.response?.data?.message || 'Failed to send reset link' });
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
 
   if (isLoggedIn) {
     return <Navigate to="/user" replace />;
   }
-  
+
+  const getPasswordStrengthClass = () => {
+    if (passwordStrength.score < 2) return 'weak';
+    if (passwordStrength.score < 4) return 'medium';
+    return 'strong';
+  };
+
   return (
     <div className="login-container">
       {showSuccessPopup && (
@@ -65,6 +224,8 @@ function Login({ isLoggedIn }) {
                       onChange={handleChange}
                       onBlur={handleBlur}
                       className={errors.forgotEmail ? 'input-error' : ''}
+                      required
+                      autoFocus
                     />
                     {errors.forgotEmail && (
                       <div className="error-message">
@@ -75,18 +236,20 @@ function Login({ isLoggedIn }) {
                   <button 
                     type="submit" 
                     className="submit-btn"
-                    disabled={!formData.forgotEmail || !!errors.forgotEmail}
+                    disabled={!formData.forgotEmail || !!errors.forgotEmail || isLoading}
                   >
-                    Send Reset Link
+                    {isLoading ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        Sending...
+                      </>
+                    ) : 'Send Reset Link'}
                   </button>
-                  <div className="back-to-login" style={{ marginTop: '20px' , textAlign: 'right'}}>
+                  <div className="form-footer-links">
                     <Link 
-                      to="#"
+                      to="#" 
                       className="text-link back-link"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setShowForgotPassword(false);
-                      }}
+                      onClick={() => setShowForgotPassword(false)}
                     >
                       <i className="bi bi-arrow-left"></i> Back to Login
                     </Link>
@@ -100,6 +263,7 @@ function Login({ isLoggedIn }) {
                     type="button"
                     className={`tab-btn ${activeTab === 'login' ? 'active' : ''}`}
                     onClick={() => setActiveTab('login')}
+                    autoFocus={!showForgotPassword}
                   >
                     Login
                   </button>
@@ -115,6 +279,11 @@ function Login({ isLoggedIn }) {
                 <div className="form-container">
                   {activeTab === 'login' ? (
                     <form className="login-form" onSubmit={handleSubmit}>
+                      {errors.form && (
+                        <div className="alert alert-danger">
+                          <i className="bi bi-exclamation-circle"></i> {errors.form}
+                        </div>
+                      )}
                       <div className="form-group">
                         <label htmlFor="email">Email address</label>
                         <input 
@@ -126,6 +295,7 @@ function Login({ isLoggedIn }) {
                           onBlur={handleBlur}
                           className={errors.email ? 'input-error' : ''}
                           required
+                          autoFocus={activeTab === 'login'}
                         />
                         {errors.email && (
                           <div className="error-message">
@@ -147,24 +317,50 @@ function Login({ isLoggedIn }) {
                           <i
                             className={`bi bi-eye${passwordVisible.login ? '-slash' : ''} toggle-icon`}
                             onClick={() => toggleVisibility('login')}
+                            aria-label={passwordVisible.login ? "Hide password" : "Show password"}
                           />
                         </div>
                       </div>
-                      <button type="submit" className="submit-btn">Login</button>
-                      <div className="forgot-password-link" style={{ marginTop: '20px', textAlign: 'right' }}>
-                        <Link 
-                          to="#" 
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setShowForgotPassword(true);
-                          }}
-                        >
-                          Forgot password?
-                        </Link>
+                      <div className="form-options">
+                        <div className="remember-me-container">
+                          <div className="remember-me">
+                            <input
+                              type="checkbox"
+                              id="rememberMe"
+                              checked={formData.rememberMe}
+                              onChange={handleChange}
+                            />
+                            <label htmlFor="rememberMe">Remember me</label>
+                          </div>
+                          <Link 
+                            to="#" 
+                            className="forgot-password-link"
+                            onClick={() => setShowForgotPassword(true)}
+                          >
+                            Forgot password?
+                          </Link>
+                        </div>
                       </div>
+                      <button 
+                        type="submit" 
+                        className="submit-btn"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? (
+                          <>
+                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            Logging in...
+                          </>
+                        ) : 'Login'}
+                      </button>
                     </form>
                   ) : (
                     <form className="register-form" onSubmit={handleSubmit}>
+                      {errors.form && (
+                        <div className="alert alert-danger">
+                          <i className="bi bi-exclamation-circle"></i> {errors.form}
+                        </div>
+                      )}
                       <div className="form-group">
                         <label htmlFor="regEmail">Email address</label>
                         <input 
@@ -176,6 +372,7 @@ function Login({ isLoggedIn }) {
                           onBlur={handleBlur}
                           className={errors.regEmail ? 'input-error' : ''}
                           required
+                          autoFocus={activeTab === 'register'}
                         />
                         {errors.regEmail && (
                           <div className="error-message">
@@ -191,14 +388,30 @@ function Login({ isLoggedIn }) {
                             id="regPassword"
                             placeholder="Enter your password"
                             value={formData.regPassword}
-                            onChange={handleChange}
+                            onChange={(e) => {
+                              handleChange(e);
+                              calculatePasswordStrength(e.target.value);
+                            }}
                             required
                           />
                           <i
                             className={`bi bi-eye${passwordVisible.register ? '-slash' : ''} toggle-icon`}
                             onClick={() => toggleVisibility('register')}
+                            aria-label={passwordVisible.register ? "Hide password" : "Show password"}
                           />
                         </div>
+                        {formData.regPassword && (
+                          <div className="password-strength-meter">
+                            <div className={`strength-bar ${getPasswordStrengthClass()}`} 
+                                 style={{ width: `${passwordStrength.score * 25}%` }}>
+                            </div>
+                            <div className="strength-feedback">
+                              {passwordStrength.feedback.suggestions.length > 0 && (
+                                <small>{passwordStrength.feedback.suggestions[0]}</small>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                       <div className="form-group password-group">
                         <label htmlFor="regConfirm">Confirm Password</label>
@@ -210,11 +423,13 @@ function Login({ isLoggedIn }) {
                             value={formData.regConfirm}
                             onChange={handleChange}
                             onBlur={handleBlur}
+                            className={errors.passwordMatch ? 'input-error' : ''}
                             required
                           />
                           <i
                             className={`bi bi-eye${passwordVisible.confirm ? '-slash' : ''} toggle-icon`}
                             onClick={() => toggleVisibility('confirm')}
+                            aria-label={passwordVisible.confirm ? "Hide password" : "Show password"}
                           />
                         </div>
                         {errors.passwordMatch && (
@@ -223,9 +438,27 @@ function Login({ isLoggedIn }) {
                           </div>
                         )}
                       </div>
-                      <button type="submit" className="submit-btn">Create Account</button>
+                      <button 
+                        type="submit" 
+                        className="submit-btn"
+                        disabled={isLoading || passwordStrength.score < 2}
+                      >
+                        {isLoading ? (
+                          <>
+                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            Registering...
+                          </>
+                        ) : 'Create Account'}
+                      </button>
                       <div className="terms-agreement">
-                        By registering, you agree to our <Link to="/terms">Terms of Service</Link>
+                        <input
+                          type="checkbox"
+                          id="agreeTerms"
+                          checked={formData.agreeTerms}
+                          onChange={handleChange}
+                          required
+                        />
+                        <label htmlFor="agreeTerms">I agree to the <Link to="/terms">Terms of Service</Link></label>
                       </div>
                     </form>
                   )}

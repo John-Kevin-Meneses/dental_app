@@ -1,22 +1,60 @@
-import { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import 'bootstrap/dist/css/bootstrap.min.css';
-import './App.css';
-import Home from './components/homepage/home/home';
-import Login from './components/user/Login/Login'; // Import your Login component
-import User from './components/user/User/User'; // Import your User component
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { createContext, useContext } from 'react';
+import axios from 'axios';
+import ProtectedRoute from './routes/protectedRoute';
+import Login from './components/user/Login/Login.jsx';
+import User from './components/user/User/User.jsx';
+import Home from './components/homepage/home/home.jsx';
 
-function App() {
-  const [count, setCount] = useState(0);
+const ApiContext = createContext();
+
+export const useApi = () => {
+  const api = useContext(ApiContext);
+  if (!api) throw new Error('useApi must be used within ApiProvider');
+  return api;
+};
+
+export const ApiProvider = ({ children }) => {
+  const api = axios.create({
+    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api',
+    withCredentials: true,
+    headers: {
+      'Content-Type': 'application/json',
+    }
+  });
+
+  api.interceptors.response.use(
+    response => response,
+    error => {
+      if (error.response?.status === 401) {
+      }
+      return Promise.reject(error);
+    }
+  );
 
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/user" element={<User />} />
-      </Routes>
-    </Router>
+    <ApiContext.Provider value={api}>
+      {children}
+    </ApiContext.Provider>
+  );
+};
+
+function App() {
+  return (
+    <ApiProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          
+          <Route element={<ProtectedRoute />}>
+            <Route path="/user" element={<User />} />
+          </Route>
+          
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </ApiProvider>
   );
 }
 
