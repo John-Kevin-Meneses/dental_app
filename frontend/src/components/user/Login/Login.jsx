@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, Navigate, useLocation } from 'react-router-dom';
 import apiService from '../../../services/api';
 import './Login.css';
 
-function Login({ isLoggedIn }) {
+function Login({ isLoggedIn, setIsLoggedIn }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState('login');
@@ -34,6 +34,13 @@ function Login({ isLoggedIn }) {
     score: 0,
     feedback: { suggestions: [] }
   });
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      setIsLoggedIn(true);
+    }
+  }, [setIsLoggedIn]);
 
   const validateEmail = (email) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -148,11 +155,13 @@ function Login({ isLoggedIn }) {
           password: formData.password,
           rememberMe: formData.rememberMe
         });
-        localStorage.setItem('token', response.data.token);
         
-        // Use navigation state if available, otherwise default to '/user'
+        localStorage.setItem('token', response.data.token);
+        setIsLoggedIn(true);
+        
         const from = location.state?.from?.pathname || '/user';
-        window.location.assign(from); // Full page reload for auth consistency
+        navigate(from, { replace: true });
+        
       } catch (error) {
         setErrors({ 
           form: error.response?.data?.message || 'Invalid email or password' 
