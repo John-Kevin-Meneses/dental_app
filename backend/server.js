@@ -1,4 +1,3 @@
-// server.js
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
@@ -8,18 +7,38 @@ dotenv.config();
 
 const app = express();
 
-// CORS Config - Enhanced version
+// Enhanced CORS Configuration
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:5174', // Your local dev frontend
+  'https://dental-app-oxff.onrender.com', // Your production frontend
+  'https://dental-app-frontend.onrender.com' // Alternative production URL
+].filter(Boolean); // Remove any undefined values
+
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    const msg = `The CORS policy for this site does not allow access from ${origin}`;
+    return callback(new Error(msg), false);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['Authorization']
+  exposedHeaders: ['Authorization'],
+  maxAge: 86400 // Cache preflight response for 24 hours
 };
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // Handle preflight requests
 
-// Middleware
+// Apply CORS middleware
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Handle preflight for all routes
+
+// Rest of your server configuration...
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

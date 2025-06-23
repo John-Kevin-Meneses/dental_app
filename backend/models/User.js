@@ -3,20 +3,20 @@ const bcrypt = require('bcryptjs');
 class User {
   /**
    * Create a new user
-   * @param {object} pool - PostgreSQL pool instance
+   * @param {object} client - PostgreSQL client or pool instance
    * @param {object} userData - User data
    * @returns {Promise<object>} Created user
    */
-  static async create(pool, { first_name, last_name, email, password, phone, role = 'patient' }) {
+  static async create(client, { username, email, password, role = 'patient' }) {
     try {
       const salt = await bcrypt.genSalt(10);
       const password_hash = await bcrypt.hash(password, salt);
 
-      const { rows } = await pool.query(
-        `INSERT INTO users (first_name, last_name, email, password_hash, phone, role)
-         VALUES ($1, $2, $3, $4, $5, $6) 
-         RETURNING user_id, first_name, last_name, email, phone, role, created_at`,
-        [first_name, last_name, email, password_hash, phone, role]
+      const { rows } = await client.query(
+        `INSERT INTO users (username, email, password_hash, role)
+         VALUES ($1, $2, $3, $4) 
+         RETURNING user_id, username, email, role, is_active, created_at, updated_at`,
+        [username, email, password_hash, role]
       );
       
       return rows[0];
@@ -46,6 +46,25 @@ class User {
   }
 
   /**
+   * Find user by username
+   * @param {object} pool - PostgreSQL pool instance
+   * @param {string} username - User username
+   * @returns {Promise<object|null>} User object or null
+   */
+  static async findByUsername(pool, username) {
+    try {
+      const { rows } = await pool.query(
+        'SELECT * FROM users WHERE username = $1', 
+        [username]
+      );
+      return rows[0] || null;
+    } catch (error) {
+      console.error('Find by username error:', error);
+      throw new Error('Failed to find user by username');
+    }
+  }
+
+  /**
    * Find user by ID
    * @param {object} pool - PostgreSQL pool instance
    * @param {number} id - User ID
@@ -54,7 +73,7 @@ class User {
   static async findById(pool, id) {
     try {
       const { rows } = await pool.query(
-        `SELECT user_id, first_name, last_name, email, phone, role, created_at 
+        `SELECT user_id, username, email, role, is_active, created_at, updated_at
          FROM users WHERE user_id = $1`,
         [id]
       );
@@ -73,7 +92,7 @@ class User {
   static async getAll(pool) {
     try {
       const { rows } = await pool.query(
-        `SELECT user_id, first_name, last_name, email, phone, role, created_at 
+        `SELECT user_id, username, email, role, is_active, created_at, updated_at
          FROM users ORDER BY created_at DESC`
       );
       return rows;
@@ -92,17 +111,17 @@ class User {
    */
   static async update(pool, id, updates) {
     try {
-      const { first_name, last_name, phone, role } = updates;
+      const { username, email, role, is_active } = updates;
       const { rows } = await pool.query(
         `UPDATE users 
-         SET first_name = COALESCE($1, first_name),
-             last_name = COALESCE($2, last_name),
-             phone = COALESCE($3, phone),
-             role = COALESCE($4, role),
+         SET username = COALESCE($1, username),
+             email = COALESCE($2, email),
+             role = COALESCE($3, role),
+             is_active = COALESCE($4, is_active),
              updated_at = CURRENT_TIMESTAMP
          WHERE user_id = $5
-         RETURNING user_id, first_name, last_name, email, phone, role`,
-        [first_name, last_name, phone, role, id]
+         RETURNING user_id, username, email, role, is_active, created_at, updated_at`,
+        [username, email, role, is_active, id]
       );
       return rows[0] || null;
     } catch (error) {
@@ -153,6 +172,44 @@ class User {
     } catch (error) {
       console.error('Password update error:', error);
       throw new Error('Failed to update password');
+    }
+  }
+
+  /**
+   * Toggle user active status
+   * @param {object} pool - PostgreSQL pool instance
+   * @param {number} id - User ID
+   * @returns {Promise<object|null>} Updated user or null
+   */
+  static async toggleActive(pool, id) {
+    try {
+      const { rows } = await pool.query(
+        `UPDATE users 
+         SET is_active = NOT is_active, 
+             updated_at = CURRENT_TIMESTAMP
+         WHERE user_id = $1
+         RETURNING user_id, username, email, role, is_active, created_at, updated_at`,
+        [id]
+      );
+      return rows[0] || null;
+    } catch (error) {
+      console.error('Toggle active status error:', error);
+      throw new Error('Failed to toggle user active status');
+    }
+  }
+
+  /**
+   * Verify user password
+   * @param {string} password - Password to verify
+   * @param {string} hash - Stored password hash
+   * @returns {Promise<boolean>} True if password matches
+   */
+  static async verifyPassword(password, hash) {
+    try {
+      return await bcrypt.compare(password, hash);
+    } catch (error) {
+      console.error('Password verification error:', error);
+      throw new Error('Failed to verify password');
     }
   }
 }

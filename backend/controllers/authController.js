@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 const User = require('../models/User');
+const Patient = require('../models/Patient');
 
 // Token generation helper
 const generateToken = (userId, role) => jwt.sign(
@@ -25,43 +26,73 @@ exports.register = async (req, res) => {
     });
   }
 
+  const client = await req.app.locals.pool.connect();
+  
   try {
-    const { first_name, last_name, email, password, phone, role = 'patient' } = req.body;
+    const { username, email, password, first_name, last_name, phone } = req.body;
+    const role = 'patient'; // Force patient role for registrations
+
+    await client.query('BEGIN');
 
     // Check existing user
-    if (await User.findByEmail(req.app.locals.pool, email)) {
+    if (await User.findByEmail(client, email)) {
       return res.status(409).json({
         success: false,
         error: 'Email already in use'
       });
     }
 
-    // Create and save user
-    const user = await User.create(req.app.locals.pool, {
-      first_name,
-      last_name,
-      email,
-      password,
-      phone,
-      role
+    if (await User.findByUsername(client, username)) {
+      return res.status(409).json({
+        success: false,
+        error: 'Username already in use'
+      });
+    }
+
+    // Create user account
+    const user = await User.create(client, { 
+      username, 
+      email, 
+      password, 
+      role 
     });
 
-    // Generate token and respond
+    // Create patient record
+    const patient = await Patient.create(client, {
+      user_id: user.user_id,
+      first_name,
+      last_name,
+      phone
+    });
+
+    await client.query('COMMIT');
+
+    // Generate token
     const token = generateToken(user.user_id, user.role);
     
     res.status(201).json({
       success: true,
       token,
-      user: sanitizeUser(user)
+      user: {
+        ...sanitizeUser(user),
+        patient: {
+          first_name: patient.first_name,
+          last_name: patient.last_name,
+          phone: patient.phone
+        }
+      }
     });
 
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Registration error:', error);
     res.status(500).json({
       success: false,
       error: 'Registration failed',
       ...(process.env.NODE_ENV === 'development' && { details: error.message })
     });
+  } finally {
+    client.release();
   }
 };
 
@@ -85,12 +116,28 @@ exports.login = async (req, res) => {
       });
     }
 
+    // Get patient data if role is patient
+    let patientData = null;
+    if (user.role === 'patient') {
+      const patient = await Patient.findByUserId(req.app.locals.pool, user.user_id);
+      if (patient) {
+        patientData = {
+          first_name: patient.first_name,
+          last_name: patient.last_name,
+          phone: patient.phone
+        };
+      }
+    }
+
     const token = generateToken(user.user_id, user.role);
     
     res.json({
       success: true,
       token,
-      user: sanitizeUser(user)
+      user: {
+        ...sanitizeUser(user),
+        ...(patientData && { patient: patientData })
+      }
     });
 
   } catch (error) {
@@ -112,9 +159,26 @@ exports.getMe = async (req, res) => {
         error: 'User not found'
       });
     }
+
+    // Get patient data if role is patient
+    let patientData = null;
+    if (user.role === 'patient') {
+      const patient = await Patient.findByUserId(req.app.locals.pool, user.user_id);
+      if (patient) {
+        patientData = {
+          first_name: patient.first_name,
+          last_name: patient.last_name,
+          phone: patient.phone
+        };
+      }
+    }
+
     res.json({
       success: true,
-      user: sanitizeUser(user)
+      user: {
+        ...sanitizeUser(user),
+        ...(patientData && { patient: patientData })
+      }
     });
   } catch (error) {
     console.error('Get user error:', error);
@@ -126,19 +190,18 @@ exports.getMe = async (req, res) => {
   }
 };
 
-// Optional: Password reset handler
+// Password reset handler remains the same
 exports.requestPasswordReset = async (req, res) => {
   try {
     const { email } = req.body;
     const user = await User.findByEmail(req.app.locals.pool, email);
     
     if (user) {
-      // In production: Send reset email with token
       const resetToken = generateToken(user.user_id, user.role);
+      // In production: Send email with reset token
       // Save token to DB with expiration
     }
     
-    // Always return success to prevent email enumeration
     res.json({ success: true });
   } catch (error) {
     console.error('Password reset error:', error);
