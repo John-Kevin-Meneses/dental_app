@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import "./header.css";
 import Container from 'react-bootstrap/Container';
 import Nav from 'react-bootstrap/Nav';
@@ -14,7 +15,7 @@ const Header = () => {
   }, []);
 
   return (
-    <header id="header" className="header d-flex align-items-center fixed-top">
+    <header id="header" className={`header d-flex align-items-center fixed-top ${scrolled ? 'scrolled' : ''}`}>
       <div className="container position-relative d-flex align-items-center justify-content-between">
         <a
           href="#header"
@@ -24,13 +25,14 @@ const Header = () => {
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
         >
-        <img
-          src="/assets/img/favicon.svg"
-          alt="iDental Logo"
-          style={{ height: "32px", marginRight: "8px" }}
-        />
-        <h1 className="sitename mb-0">iDental Inc.</h1>
+          <img
+            src="/assets/img/favicon.svg"
+            alt="iDental Logo"
+            style={{ height: "32px", marginRight: "8px" }}
+          />
+          <h1 className="sitename mb-0">iDental Inc.</h1>
         </a>
+
         <nav id="navmenu" className="navmenu">
           <ul>
             <li><a href="#" className="active">Home</a></li>
@@ -39,7 +41,8 @@ const Header = () => {
           </ul>
           <i className="mobile-nav-toggle d-xl-none bi bi-list" />
         </nav>
-        <a className="btn-getstarted" href="/login">Book Online</a>
+
+        <Link className="btn-getstarted" to="/login">Book Online</Link>
       </div>
     </header>
   );
