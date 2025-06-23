@@ -7,16 +7,16 @@ class User {
    * @param {object} userData - User data
    * @returns {Promise<object>} Created user
    */
-  static async create(client, { username, email, password, role = 'patient' }) {
+  static async create(client, { email, password, role = 'patient' }) {
     try {
       const salt = await bcrypt.genSalt(10);
       const password_hash = await bcrypt.hash(password, salt);
 
       const { rows } = await client.query(
-        `INSERT INTO users (username, email, password_hash, role)
+        `INSERT INTO users (email, password_hash, role)
          VALUES ($1, $2, $3, $4) 
-         RETURNING user_id, username, email, role, is_active, created_at, updated_at`,
-        [username, email, password_hash, role]
+         RETURNING user_id, email, role, is_active, created_at, updated_at`,
+        [email, password_hash, role]
       );
       
       return rows[0];
@@ -45,25 +45,7 @@ class User {
     }
   }
 
-  /**
-   * Find user by username
-   * @param {object} pool - PostgreSQL pool instance
-   * @param {string} username - User username
-   * @returns {Promise<object|null>} User object or null
-   */
-  static async findByUsername(pool, username) {
-    try {
-      const { rows } = await pool.query(
-        'SELECT * FROM users WHERE username = $1', 
-        [username]
-      );
-      return rows[0] || null;
-    } catch (error) {
-      console.error('Find by username error:', error);
-      throw new Error('Failed to find user by username');
-    }
-  }
-
+ 
   /**
    * Find user by ID
    * @param {object} pool - PostgreSQL pool instance
@@ -73,7 +55,7 @@ class User {
   static async findById(pool, id) {
     try {
       const { rows } = await pool.query(
-        `SELECT user_id, username, email, role, is_active, created_at, updated_at
+        `SELECT user_id, email, role, is_active, created_at, updated_at
          FROM users WHERE user_id = $1`,
         [id]
       );
@@ -92,7 +74,7 @@ class User {
   static async getAll(pool) {
     try {
       const { rows } = await pool.query(
-        `SELECT user_id, username, email, role, is_active, created_at, updated_at
+        `SELECT user_id, email, role, is_active, created_at, updated_at
          FROM users ORDER BY created_at DESC`
       );
       return rows;
@@ -111,17 +93,16 @@ class User {
    */
   static async update(pool, id, updates) {
     try {
-      const { username, email, role, is_active } = updates;
+      const {email, role, is_active } = updates;
       const { rows } = await pool.query(
         `UPDATE users 
-         SET username = COALESCE($1, username),
-             email = COALESCE($2, email),
+         SET email = COALESCE($2, email),
              role = COALESCE($3, role),
              is_active = COALESCE($4, is_active),
              updated_at = CURRENT_TIMESTAMP
          WHERE user_id = $5
-         RETURNING user_id, username, email, role, is_active, created_at, updated_at`,
-        [username, email, role, is_active, id]
+         RETURNING user_id, email, role, is_active, created_at, updated_at`,
+        [email, role, is_active, id]
       );
       return rows[0] || null;
     } catch (error) {
@@ -188,7 +169,7 @@ class User {
          SET is_active = NOT is_active, 
              updated_at = CURRENT_TIMESTAMP
          WHERE user_id = $1
-         RETURNING user_id, username, email, role, is_active, created_at, updated_at`,
+         RETURNING user_id, email, role, is_active, created_at, updated_at`,
         [id]
       );
       return rows[0] || null;

@@ -29,7 +29,7 @@ exports.register = async (req, res) => {
   const client = await req.app.locals.pool.connect();
   
   try {
-    const { username, email, password, first_name, last_name, phone } = req.body;
+    const { email, password, first_name, last_name, phone } = req.body;
     const role = 'patient'; // Force patient role for registrations
 
     await client.query('BEGIN');
@@ -42,16 +42,8 @@ exports.register = async (req, res) => {
       });
     }
 
-    if (await User.findByUsername(client, username)) {
-      return res.status(409).json({
-        success: false,
-        error: 'Username already in use'
-      });
-    }
-
     // Create user account
     const user = await User.create(client, { 
-      username, 
       email, 
       password, 
       role 

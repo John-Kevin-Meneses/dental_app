@@ -6,7 +6,7 @@ class AuthService {
     this.pool = pool;
   }
 
-  async registerPatient({ username, email, password, first_name, last_name, phone }) {
+  async registerPatient({ email, password, first_name, last_name, phone }) {
     const client = await this.pool.connect();
     
     try {
@@ -14,7 +14,6 @@ class AuthService {
 
       // 1. Create the user account
       const user = await User.create(client, { 
-        username, 
         email, 
         password, 
         role: 'patient' 
@@ -33,7 +32,6 @@ class AuthService {
       return {
         user: {
           user_id: user.user_id,
-          username: user.username,
           email: user.email,
           role: user.role
         },

@@ -30,7 +30,7 @@ class Patient {
   static async findByUserId(pool, user_id) {
     try {
       const { rows } = await pool.query(
-        `SELECT p.*, u.email, u.username, u.role
+        `SELECT p.*, u.email, u.role
          FROM patients p
          JOIN users u ON p.user_id = u.user_id
          WHERE p.user_id = $1`,
