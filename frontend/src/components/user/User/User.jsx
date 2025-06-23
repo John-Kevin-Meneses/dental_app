@@ -18,7 +18,7 @@ import {
   handleCancel,
   handleLogout,
   eventStyleGetter
-} from '../Login/actions';
+} from './actions';
 
 const localizer = momentLocalizer(moment);
 
