@@ -10,6 +10,7 @@ const app = express();
 // Enhanced CORS Configuration
 const allowedOrigins = [
   process.env.FRONTEND_URL,
+  'http://localhost:5173', // Your local dev frontend
   'http://localhost:5174', // Your local dev frontend
   'https://dental-app-oxff.onrender.com', // Your production frontend
   'https://dental-app-frontend.onrender.com' // Alternative production URL
