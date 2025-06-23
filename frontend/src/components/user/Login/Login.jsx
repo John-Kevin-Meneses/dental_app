@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Navigate, Link } from 'react-router-dom';
+import { useNavigate, Link, Navigate, useLocation } from 'react-router-dom';
 import apiService from '../../../services/api';
 import './Login.css';
 
 function Login({ isLoggedIn }) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState('login');
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState({
@@ -12,12 +14,9 @@ function Login({ isLoggedIn }) {
     confirm: false
   });
   const [formData, setFormData] = useState({
-    // Login fields
     email: '',
     password: '',
     rememberMe: false,
-    
-    // Registration fields
     firstName: '',
     lastName: '',
     regEmail: '',
@@ -25,8 +24,6 @@ function Login({ isLoggedIn }) {
     regConfirm: '',
     phone: '',
     agreeTerms: false,
-    
-    // Forgot password
     forgotEmail: ''
   });
   
@@ -38,13 +35,11 @@ function Login({ isLoggedIn }) {
     feedback: { suggestions: [] }
   });
 
-  // Validate email format
   const validateEmail = (email) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return re.test(String(email).toLowerCase());
   };
 
-  // Field validation handlers
   const handleEmailValidation = (field, value) => {
     if (!value) {
       setErrors(prev => ({ ...prev, [field]: `${field.includes('reg') ? 'Registration email' : 'Email'} is required` }));
@@ -78,7 +73,6 @@ function Login({ isLoggedIn }) {
     return true;
   };
 
-  // Event handlers
   const handleBlur = (e) => {
     const { id, value } = e.target;
     
@@ -122,7 +116,6 @@ function Login({ isLoggedIn }) {
     }
   };
 
-  // Password strength calculator
   const calculatePasswordStrength = (password) => {
     const score = Math.min(Math.floor(password.length / 3), 4);
     setPasswordStrength({
@@ -137,7 +130,6 @@ function Login({ isLoggedIn }) {
     return 'strong';
   };
 
-  // Form submission handlers
   const handleLogin = async (e) => {
     e.preventDefault();
     let isValid = true;
@@ -157,7 +149,10 @@ function Login({ isLoggedIn }) {
           rememberMe: formData.rememberMe
         });
         localStorage.setItem('token', response.data.token);
-        window.location.href = '/user';
+        
+        // Use navigation state if available, otherwise default to '/user'
+        const from = location.state?.from?.pathname || '/user';
+        window.location.assign(from); // Full page reload for auth consistency
       } catch (error) {
         setErrors({ 
           form: error.response?.data?.message || 'Invalid email or password' 
@@ -172,7 +167,6 @@ function Login({ isLoggedIn }) {
     e.preventDefault();
     let isValid = true;
     
-    // Validate all required fields
     isValid = validateRequiredField('firstName', 'First name') && isValid;
     isValid = validateRequiredField('lastName', 'Last name') && isValid;
     isValid = handleEmailValidation('regEmail', formData.regEmail) && isValid;
