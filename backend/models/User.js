@@ -14,7 +14,7 @@ class User {
 
       const { rows } = await client.query(
         `INSERT INTO users (email, password_hash, role)
-         VALUES ($1, $2, $3, $4) 
+         VALUES ($1, $2, $3) 
          RETURNING user_id, email, role, is_active, created_at, updated_at`,
         [email, password_hash, role]
       );
