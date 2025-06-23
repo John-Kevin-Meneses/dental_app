@@ -1,11 +1,9 @@
+// routes/dentistRoutes.js
 const express = require('express');
 const router = express.Router();
-const { 
-  getDentists, 
-  getAvailableSlots 
-} = require('../controllers/dentistController');
+const dentistController = require('../controllers/dentistController');
 
-router.get('/', getDentists);
-router.get('/available', getAvailableSlots);
+router.get('/', dentistController.getDentists);
+router.get('/slots', dentistController.getAvailableSlots);
 
 module.exports = router;
