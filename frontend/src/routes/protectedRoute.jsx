@@ -1,40 +1,31 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
 import apiService from '../services/api';
 
-const ProtectedRoute = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+const ProtectedRoute = () => {
+  const [authStatus, setAuthStatus] = useState('loading'); // 'loading', 'authenticated', 'unauthenticated'
 
   useEffect(() => {
     const checkAuth = async () => {
       try {
         const response = await apiService.getProfile();
-        if (response.success) {
-          setIsAuthenticated(true);
-        } else {
-          navigate('/login');
-        }
+        setAuthStatus(response.success ? 'authenticated' : 'unauthenticated');
       } catch (error) {
-        navigate('/login');
-      } finally {
-        setLoading(false);
+        setAuthStatus('unauthenticated');
       }
     };
-
     checkAuth();
-  }, [navigate]);
+  }, []);
 
-  if (loading) {
-    return (
-      <div className="auth-loading">
-        <div className="spinner"></div>
-      </div>
-    );
+  if (authStatus === 'loading') {
+    return <div>Loading...</div>;
   }
 
-  return isAuthenticated ? children : null;
+  if (authStatus === 'unauthenticated') {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <Outlet />;
 };
 
 export default ProtectedRoute;
