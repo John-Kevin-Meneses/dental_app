@@ -1,42 +1,53 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Navigate, Link } from 'react-router-dom';
-import apiService from '../../../services/api'; // Using the imported apiService directly
+import apiService from '../../../services/api';
 import './Login.css';
 
 function Login({ isLoggedIn }) {
-  const [activeTab, setActiveTab] = React.useState('login');
-  const [showForgotPassword, setShowForgotPassword] = React.useState(false);
-  const [passwordVisible, setPasswordVisible] = React.useState({
+  const [activeTab, setActiveTab] = useState('login');
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [passwordVisible, setPasswordVisible] = useState({
     login: false,
     register: false,
     confirm: false
   });
-  const [formData, setFormData] = React.useState({
+  const [formData, setFormData] = useState({
+    // Login fields
     email: '',
     password: '',
+    rememberMe: false,
+    
+    // Registration fields
+    firstName: '',
+    lastName: '',
     regEmail: '',
     regPassword: '',
     regConfirm: '',
-    forgotEmail: '',
-    rememberMe: false,
-    agreeTerms: false
+    phone: '',
+    agreeTerms: false,
+    
+    // Forgot password
+    forgotEmail: ''
   });
-  const [errors, setErrors] = React.useState({});
-  const [showSuccessPopup, setShowSuccessPopup] = React.useState(false);
-  const [isLoading, setIsLoading] = React.useState(false);
-  const [passwordStrength, setPasswordStrength] = React.useState({
+  
+  const [errors, setErrors] = useState({});
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState({
     score: 0,
     feedback: { suggestions: [] }
   });
 
+  // Validate email format
   const validateEmail = (email) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return re.test(String(email).toLowerCase());
   };
 
+  // Field validation handlers
   const handleEmailValidation = (field, value) => {
     if (!value) {
-      setErrors(prev => ({ ...prev, [field]: 'Email is required' }));
+      setErrors(prev => ({ ...prev, [field]: `${field.includes('reg') ? 'Registration email' : 'Email'} is required` }));
       return false;
     } else if (!validateEmail(value)) {
       setErrors(prev => ({ ...prev, [field]: 'Please enter a valid email address' }));
@@ -58,12 +69,29 @@ function Login({ isLoggedIn }) {
     }
   };
 
+  const validateRequiredField = (field, displayName) => {
+    if (!formData[field]) {
+      setErrors(prev => ({ ...prev, [field]: `${displayName} is required` }));
+      return false;
+    }
+    setErrors(prev => ({ ...prev, [field]: '' }));
+    return true;
+  };
+
+  // Event handlers
   const handleBlur = (e) => {
     const { id, value } = e.target;
+    
     if (id === 'email' || id === 'regEmail' || id === 'forgotEmail') {
       handleEmailValidation(id, value);
     } else if (id === 'regConfirm') {
       checkPasswordMatch();
+    } else if (id === 'firstName') {
+      validateRequiredField('firstName', 'First name');
+    } else if (id === 'lastName') {
+      validateRequiredField('lastName', 'Last name');
+    } else if (id === 'phone') {
+      validateRequiredField('phone', 'Phone number');
     }
   };
 
@@ -88,10 +116,14 @@ function Login({ isLoggedIn }) {
         formData.regPassword && formData.regConfirm) {
       checkPasswordMatch();
     }
+    
+    if (id === 'regPassword') {
+      calculatePasswordStrength(value);
+    }
   };
 
+  // Password strength calculator
   const calculatePasswordStrength = (password) => {
-    // In a real app, you would use zxcvbn or similar library
     const score = Math.min(Math.floor(password.length / 3), 4);
     setPasswordStrength({
       score,
@@ -99,53 +131,83 @@ function Login({ isLoggedIn }) {
     });
   };
 
-  const handleSubmit = async (e) => {
+  const getPasswordStrengthClass = () => {
+    if (passwordStrength.score < 2) return 'weak';
+    if (passwordStrength.score < 4) return 'medium';
+    return 'strong';
+  };
+
+  // Form submission handlers
+  const handleLogin = async (e) => {
     e.preventDefault();
     let isValid = true;
     
-    if (activeTab === 'login') {
-      isValid = handleEmailValidation('email', formData.email) && isValid;
-      if (!formData.password) {
-        setErrors(prev => ({ ...prev, password: 'Password is required' }));
-        isValid = false;
-      }
-    } else {
-      isValid = handleEmailValidation('regEmail', formData.regEmail) && isValid;
-      if (!formData.regPassword) {
-        setErrors(prev => ({ ...prev, regPassword: 'Password is required' }));
-        isValid = false;
-      }
-      isValid = checkPasswordMatch() && isValid;
-      if (!formData.agreeTerms) {
-        setErrors(prev => ({ ...prev, agreeTerms: 'You must agree to the terms' }));
-        isValid = false;
-      }
+    isValid = handleEmailValidation('email', formData.email) && isValid;
+    if (!formData.password) {
+      setErrors(prev => ({ ...prev, password: 'Password is required' }));
+      isValid = false;
     }
 
     if (isValid) {
       setIsLoading(true);
       try {
-        if (activeTab === 'login') {
-          const response = await apiService.login({ // Using apiService directly
-            email: formData.email,
-            password: formData.password,
-            rememberMe: formData.rememberMe
-          });
-          localStorage.setItem('token', response.data.token);
-          window.location.href = '/user';
-        } else {
-          await apiService.register({ // Using apiService directly
-            email: formData.regEmail,
-            password: formData.regPassword
-          });
-          setShowSuccessPopup(true);
-          setTimeout(() => {
-            setActiveTab('login');
-            setShowSuccessPopup(false);
-          }, 3000);
-        }
+        const response = await apiService.login({
+          email: formData.email,
+          password: formData.password,
+          rememberMe: formData.rememberMe
+        });
+        localStorage.setItem('token', response.data.token);
+        window.location.href = '/user';
       } catch (error) {
-        setErrors({ form: error.response?.data?.message || 'An error occurred. Please try again.' });
+        setErrors({ 
+          form: error.response?.data?.message || 'Invalid email or password' 
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    let isValid = true;
+    
+    // Validate all required fields
+    isValid = validateRequiredField('firstName', 'First name') && isValid;
+    isValid = validateRequiredField('lastName', 'Last name') && isValid;
+    isValid = handleEmailValidation('regEmail', formData.regEmail) && isValid;
+    isValid = validateRequiredField('phone', 'Phone number') && isValid;
+    
+    if (!formData.regPassword) {
+      setErrors(prev => ({ ...prev, regPassword: 'Password is required' }));
+      isValid = false;
+    }
+    isValid = checkPasswordMatch() && isValid;
+    
+    if (!formData.agreeTerms) {
+      setErrors(prev => ({ ...prev, agreeTerms: 'You must agree to the terms' }));
+      isValid = false;
+    }
+
+    if (isValid) {
+      setIsLoading(true);
+      try {
+        await apiService.register({
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          email: formData.regEmail,
+          password: formData.regPassword,
+          phone: formData.phone
+        });
+        setShowSuccessPopup(true);
+        setTimeout(() => {
+          setActiveTab('login');
+          setShowSuccessPopup(false);
+        }, 3000);
+      } catch (error) {
+        setErrors({ 
+          form: error.response?.data?.message || 'Registration failed. Please try again.' 
+        });
       } finally {
         setIsLoading(false);
       }
@@ -159,7 +221,7 @@ function Login({ isLoggedIn }) {
     if (isValid) {
       setIsLoading(true);
       try {
-        await apiService.forgotPassword({ email: formData.forgotEmail }); // Using apiService directly
+        await apiService.forgotPassword({ email: formData.forgotEmail });
         setShowSuccessPopup(true);
         setTimeout(() => {
           setShowForgotPassword(false);
@@ -178,19 +240,17 @@ function Login({ isLoggedIn }) {
     return <Navigate to="/user" replace />;
   }
 
-  const getPasswordStrengthClass = () => {
-    if (passwordStrength.score < 2) return 'weak';
-    if (passwordStrength.score < 4) return 'medium';
-    return 'strong';
-  };
-
   return (
     <div className="login-container">
       {showSuccessPopup && (
         <div className="success-popup">
           <div className="popup-content">
             <i className="bi bi-check-circle"></i>
-            <p>Password reset link sent to your email!</p>
+            <p>
+              {activeTab === 'register' 
+                ? 'Registration successful! Please log in.'
+                : 'Password reset link sent to your email!'}
+            </p>
           </div>
         </div>
       )}
@@ -202,8 +262,8 @@ function Login({ isLoggedIn }) {
 
         <div className="card-image-side">
           <div className="image-overlay">
-            <h2 className="welcome-text">Welcome to Our Online Dental Platform</h2>
-            <p className="welcome-subtext">Your smile starts here – Sign In or Register to manage your care</p>
+            <h2 className="welcome-text">Welcome to Our Platform</h2>
+            <p className="welcome-subtext">Sign in or register to access your account</p>
           </div>
         </div>
 
@@ -263,7 +323,6 @@ function Login({ isLoggedIn }) {
                     type="button"
                     className={`tab-btn ${activeTab === 'login' ? 'active' : ''}`}
                     onClick={() => setActiveTab('login')}
-                    autoFocus={!showForgotPassword}
                   >
                     Login
                   </button>
@@ -278,7 +337,7 @@ function Login({ isLoggedIn }) {
 
                 <div className="form-container">
                   {activeTab === 'login' ? (
-                    <form className="login-form" onSubmit={handleSubmit}>
+                    <form className="login-form" onSubmit={handleLogin}>
                       {errors.form && (
                         <div className="alert alert-danger">
                           <i className="bi bi-exclamation-circle"></i> {errors.form}
@@ -295,7 +354,7 @@ function Login({ isLoggedIn }) {
                           onBlur={handleBlur}
                           className={errors.email ? 'input-error' : ''}
                           required
-                          autoFocus={activeTab === 'login'}
+                          autoFocus
                         />
                         {errors.email && (
                           <div className="error-message">
@@ -320,6 +379,11 @@ function Login({ isLoggedIn }) {
                             aria-label={passwordVisible.login ? "Hide password" : "Show password"}
                           />
                         </div>
+                        {errors.password && (
+                          <div className="error-message">
+                            <i className="bi bi-exclamation-circle"></i> {errors.password}
+                          </div>
+                        )}
                       </div>
                       <div className="form-options">
                         <div className="remember-me-container">
@@ -355,12 +419,69 @@ function Login({ isLoggedIn }) {
                       </button>
                     </form>
                   ) : (
-                    <form className="register-form" onSubmit={handleSubmit}>
+                    <form className="register-form" onSubmit={handleRegister}>
                       {errors.form && (
                         <div className="alert alert-danger">
                           <i className="bi bi-exclamation-circle"></i> {errors.form}
                         </div>
                       )}
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label htmlFor="firstName">First Name</label>
+                          <input
+                            type="text"
+                            id="firstName"
+                            placeholder="Enter your first name"
+                            value={formData.firstName}
+                            onChange={handleChange}
+                            onBlur={handleBlur}
+                            className={errors.firstName ? 'input-error' : ''}
+                            required
+                            autoFocus
+                          />
+                          {errors.firstName && (
+                            <div className="error-message">
+                              <i className="bi bi-exclamation-circle"></i> {errors.firstName}
+                            </div>
+                          )}
+                        </div>
+                        <div className="form-group">
+                          <label htmlFor="lastName">Last Name</label>
+                          <input
+                            type="text"
+                            id="lastName"
+                            placeholder="Enter your last name"
+                            value={formData.lastName}
+                            onChange={handleChange}
+                            onBlur={handleBlur}
+                            className={errors.lastName ? 'input-error' : ''}
+                            required
+                          />
+                          {errors.lastName && (
+                            <div className="error-message">
+                              <i className="bi bi-exclamation-circle"></i> {errors.lastName}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="phone">Phone Number</label>
+                        <input
+                          type="tel"
+                          id="phone"
+                          placeholder="Enter your phone number"
+                          value={formData.phone}
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                          className={errors.phone ? 'input-error' : ''}
+                          required
+                        />
+                        {errors.phone && (
+                          <div className="error-message">
+                            <i className="bi bi-exclamation-circle"></i> {errors.phone}
+                          </div>
+                        )}
+                      </div>
                       <div className="form-group">
                         <label htmlFor="regEmail">Email address</label>
                         <input 
@@ -372,7 +493,6 @@ function Login({ isLoggedIn }) {
                           onBlur={handleBlur}
                           className={errors.regEmail ? 'input-error' : ''}
                           required
-                          autoFocus={activeTab === 'register'}
                         />
                         {errors.regEmail && (
                           <div className="error-message">
@@ -406,8 +526,8 @@ function Login({ isLoggedIn }) {
                                  style={{ width: `${passwordStrength.score * 25}%` }}>
                             </div>
                             <div className="strength-feedback">
-                              {passwordStrength.feedback.suggestions.length > 0 && (
-                                <small>{passwordStrength.feedback.suggestions[0]}</small>
+                              {passwordStrength.score < 2 && (
+                                <small>Weak - try adding more characters</small>
                               )}
                             </div>
                           </div>
@@ -438,6 +558,21 @@ function Login({ isLoggedIn }) {
                           </div>
                         )}
                       </div>
+                      <div className="terms-agreement">
+                        <input
+                          type="checkbox"
+                          id="agreeTerms"
+                          checked={formData.agreeTerms}
+                          onChange={handleChange}
+                          required
+                        />
+                        <label htmlFor="agreeTerms">I agree to the <Link to="/terms">Terms of Service</Link></label>
+                        {errors.agreeTerms && (
+                          <div className="error-message">
+                            <i className="bi bi-exclamation-circle"></i> {errors.agreeTerms}
+                          </div>
+                        )}
+                      </div>
                       <button 
                         type="submit" 
                         className="submit-btn"
@@ -450,16 +585,6 @@ function Login({ isLoggedIn }) {
                           </>
                         ) : 'Create Account'}
                       </button>
-                      <div className="terms-agreement">
-                        <input
-                          type="checkbox"
-                          id="agreeTerms"
-                          checked={formData.agreeTerms}
-                          onChange={handleChange}
-                          required
-                        />
-                        <label htmlFor="agreeTerms">I agree to the <Link to="/terms">Terms of Service</Link></label>
-                      </div>
                     </form>
                   )}
                 </div>
