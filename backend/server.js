@@ -88,7 +88,8 @@ app.use('/api/dentists', require('./routes/dentistRoutes'));
 app.use('/api/patients', require('./routes/patientRoutes'));
 app.use('/api/users', require('./routes/userRoutes')); 
 app.use('/api/appointments', require('./routes/appointmentRoutes')); 
- 
+app.use('/api/procedures', require('./routes/procedureRoutes')); // Add this line
+
 // Health Check
 app.get('/api/health', (_, res) => res.status(200).json({ status: 'ok' }));
 

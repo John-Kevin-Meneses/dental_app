@@ -204,113 +204,113 @@ const UserDashboard = () => {
         </div>
 
         {state.loading ? (
-          <div className="text-center my-5">
-            <div className="spinner-border text-primary" role="status">
-              <span className="visually-hidden">Loading...</span>
-            </div>
+        <div className="text-center my-5">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
           </div>
-        ) : (
-          <div className="row">
-            <div className="col-lg-6 col-md-12 mb-4">
-              <div className="card h-100 animate-fade-in">
-                <div className="card-body">
-                  <h3 className="card-title">Upcoming Appointments</h3>
-                  <div className="table-responsive">
-                    <table className="table table-hover">
-                      <thead>
-                        <tr>
-                          <th>Date</th>
-                          <th>Time</th>
-                          <th>Dentist</th>
-                          <th>Procedure</th>
-                          <th>Status</th>
-                          <th>Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {state.filteredAppointments.length > 0 ? (
-                          state.filteredAppointments.map((appointment) => (
-                            <tr key={appointment.id} className="animate-row">
-                              <td>{moment(appointment.start).format('MMM D, YYYY')}</td>
-                              <td>{moment(appointment.start).format('h:mm A')}</td>
-                              <td>{appointment.dentist}</td>
-                              <td>{appointment.procedure}</td>
-                              <td>
-                                <span className={`badge ${
-                                  appointment.status === 'scheduled' ? 'bg-info' :
-                                  appointment.status === 'confirmed' ? 'bg-success' :
-                                  appointment.status === 'cancelled' ? 'bg-danger' :
-                                  appointment.status === 'no_show' ? 'bg-warning' :
-                                  'bg-secondary'
-                                }`}>
-                                  {appointment.status}
-                                </span>
-                              </td>
-                              <td>
+        </div>
+      ) : (
+        <div className="row g-4"> 
+          <div className="col-lg-6 col-md-12 d-flex"> 
+            <div className="card flex-grow-1 animate-fade-in"> 
+              <div className="card-body d-flex flex-column"> 
+                <h3 className="card-title">Upcoming Appointments</h3>
+                <div className="table-responsive flex-grow-1"> 
+                  <table className="table table-hover mb-0"> 
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Dentist</th>
+                        <th>Procedure</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {state.filteredAppointments.length > 0 ? (
+                        state.filteredAppointments.map((appointment) => (
+                          <tr key={appointment.id} className="animate-row">
+                            <td>{moment(appointment.start).format('MMM D, YYYY')}</td>
+                            <td>{moment(appointment.start).format('h:mm A')}</td>
+                            <td>{appointment.dentist}</td>
+                            <td>{appointment.procedure}</td>
+                            <td>
+                              <span className={`badge ${
+                                appointment.status === 'scheduled' ? 'bg-info' :
+                                appointment.status === 'confirmed' ? 'bg-success' :
+                                appointment.status === 'cancelled' ? 'bg-danger' :
+                                appointment.status === 'no_show' ? 'bg-warning' :
+                                'bg-secondary'
+                              }`}>
+                                {appointment.status}
+                              </span>
+                            </td>
+                            <td>
+                              <button 
+                                className="btn btn-sm btn-outline-primary me-2"
+                                onClick={() => handleShowModal(apiService, state, setState, appointment)}
+                                disabled={state.loading}
+                              >
+                                <i className="bi bi-pencil me-1"></i>Reschedule
+                              </button>
+                              {appointment.status !== 'cancelled' && (
                                 <button 
-                                  className="btn btn-sm btn-outline-primary me-2"
-                                  onClick={() => handleShowModal(apiService, state, setState, appointment)}
+                                  className="btn btn-sm btn-outline-danger"
+                                  onClick={() => handleCancel(appointment.id, apiService, setState)}
                                   disabled={state.loading}
                                 >
-                                  <i className="bi bi-pencil me-1"></i>Reschedule
+                                  <i className="bi bi-x-circle me-1"></i>Cancel
                                 </button>
-                                {appointment.status !== 'cancelled' && (
-                                  <button 
-                                    className="btn btn-sm btn-outline-danger"
-                                    onClick={() => handleCancel(appointment.id, apiService, setState)}
-                                    disabled={state.loading}
-                                  >
-                                    <i className="bi bi-x-circle me-1"></i>Cancel
-                                  </button>
-                                )}
-                              </td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan="6" className="text-center py-4">No appointments found</td>
+                              )}
+                            </td>
                           </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="col-lg-6 col-md-12">
-              <div className="card h-100">
-                <div className="card-body">
-                  <h3 className="card-title">Appointment Calendar</h3>
-                  <div className="calendar-container">
-                    <Calendar
-                      localizer={localizer}
-                      events={state.filteredAppointments}
-                      startAccessor="start"
-                      endAccessor="end"
-                      style={{ height: 500 }}
-                      defaultView="month"
-                      views={['month', 'week', 'day', 'agenda']}
-                      view={state.currentView}
-                      date={state.currentDate}
-                      onNavigate={onNavigate}
-                      onView={onView}
-                      eventPropGetter={eventStyleGetter}
-                      onSelectEvent={(event) => handleShowModal(apiService, state, setState, event)}
-                      selectable={true}
-                      step={60}
-                      timeslots={1}
-                      defaultDate={new Date()}
-                      min={new Date(0, 0, 0, 8, 0, 0)}
-                      max={new Date(0, 0, 0, 17, 0, 0)}
-                      toolbar={true}
-                    />
-                  </div>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="6" className="text-center py-4">No appointments found</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
           </div>
-        )}
+
+          <div className="col-lg-6 col-md-12 d-flex"> 
+            <div className="card flex-grow-1"> 
+              <div className="card-body d-flex flex-column">
+                <h3 className="card-title">Appointment Calendar</h3>
+                <div className="calendar-container flex-grow-1"> 
+                  <Calendar
+                    localizer={localizer}
+                    events={state.filteredAppointments}
+                    startAccessor="start"
+                    endAccessor="end"
+                    style={{ height: '100%' }} 
+                    defaultView="month"
+                    views={['month', 'week', 'day', 'agenda']}
+                    view={state.currentView}
+                    date={state.currentDate}
+                    onNavigate={onNavigate}
+                    onView={onView}
+                    eventPropGetter={eventStyleGetter}
+                    onSelectEvent={(event) => handleShowModal(apiService, state, setState, event)}
+                    selectable={true}
+                    step={60}
+                    timeslots={1}
+                    defaultDate={new Date()}
+                    min={new Date(0, 0, 0, 8, 0, 0)}
+                    max={new Date(0, 0, 0, 17, 0, 0)}
+                    toolbar={true}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
 
       {state.showModal && (
@@ -343,9 +343,10 @@ const UserDashboard = () => {
                     onChange={(e) => handleInputChange(e, state, setState)}
                     required
                   >
+                    <option value="">Select a dentist</option>
                     {state.dentists.map(dentist => (
                       <option key={dentist.dentist_id} value={dentist.dentist_id}>
-                        Dr. {dentist.last_name}
+                        {dentist.full_name}
                       </option>
                     ))}
                   </select>
@@ -360,6 +361,7 @@ const UserDashboard = () => {
                     onChange={(e) => handleInputChange(e, state, setState)}
                     required
                   >
+                    <option value="">Select a procedure</option>
                     {state.procedures.map(procedure => (
                       <option key={procedure.procedure_id} value={procedure.procedure_id}>
                         {procedure.name} ({procedure.duration_minutes} mins)
