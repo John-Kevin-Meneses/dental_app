@@ -1,11 +1,10 @@
-// User.jsx
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './User.css';
-
+import apiService from '../../../services/api';
 import {
   generateAvailableHours,
   fetchInitialData,
@@ -37,25 +36,28 @@ const UserDashboard = () => {
     dentists: [],
     procedures: [],
     loading: true,
-    profileLoading: true
+    profileLoading: true,
+    error: null
   });
 
   const [userProfile, setUserProfile] = useState({
     name: "",
-    avatar: "",
+    avatar: "https://randomuser.me/api/portraits/men/32.jpg",
     email: "",
     phone: "",
-    insurance: ""
+    role: "",
+    patientId: null
   });
 
   useEffect(() => {
-    fetchInitialData(setState, setUserProfile);
+    fetchInitialData(apiService, setState, setUserProfile);
   }, []);
 
   useEffect(() => {
     filterAppointments(state, setState);
   }, [state.searchTerm, state.filterStatus, state.appointments]);
 
+  // Calendar handlers
   const onNavigate = (newDate) => {
     setState(prev => ({ ...prev, currentDate: newDate }));
   };
@@ -64,6 +66,7 @@ const UserDashboard = () => {
     setState(prev => ({ ...prev, currentView: newView }));
   };
 
+  // Profile dropdown toggle
   const toggleProfileDropdown = () => {
     setState(prev => ({ ...prev, showProfileDropdown: !prev.showProfileDropdown }));
   };
@@ -84,33 +87,122 @@ const UserDashboard = () => {
 
   return (
     <div className="patient-dashboard">
-      {/* Navbar remains the same */}
       <nav className="navbar navbar-expand-lg navbar-dark bg-primary">
-        {/* ... existing navbar code ... */}
+        <div className="container-fluid">
+          <a className="navbar-brand" href="#">DentalCare</a>
+          <div className="d-flex align-items-center">
+            <div className="dropdown">
+              <button 
+                className="btn btn-primary dropdown-toggle d-flex align-items-center"
+                onClick={toggleProfileDropdown}
+              >
+                <img 
+                  src={userProfile.avatar} 
+                  alt="Profile" 
+                  className="rounded-circle me-2" 
+                  width="32" 
+                  height="32"
+                />
+                {userProfile.name}
+              </button>
+              {state.showProfileDropdown && (
+                <div className="dropdown-menu dropdown-menu-end show">
+                  <button className="dropdown-item" onClick={handleEditProfile}>
+                    <i className="bi bi-person me-2"></i>Edit Profile
+                  </button>
+                  <button className="dropdown-item" onClick={() => handleLogout(apiService)}>
+                    <i className="bi bi-box-arrow-right me-2"></i>Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </nav>
 
       <div className="container-fluid py-4">
-        {/* Profile card remains the same */}
+        {state.error && (
+          <div className="alert alert-danger">
+            Error: {state.error}
+            <button className="btn btn-sm btn-light ms-3" onClick={() => setState(prev => ({ ...prev, error: null }))}>
+              Dismiss
+            </button>
+          </div>
+        )}
+
         <div className="card mb-4 animate-fade-in">
-          {/* ... existing profile card code ... */}
+          <div className="card-body">
+            <div className="row align-items-center">
+              <div className="col-md-2 text-center">
+                <img 
+                  src={userProfile.avatar} 
+                  alt="Profile" 
+                  className="rounded-circle" 
+                  width="100" 
+                  height="100"
+                />
+              </div>
+              <div className="col-md-10">
+                <h2 className="mb-1">{userProfile.name}</h2>
+                <div className="row mt-3">
+                  <div className="col-md-4">
+                    <p><i className="bi bi-envelope me-2"></i> {userProfile.email}</p>
+                  </div>
+                  <div className="col-md-4">
+                    <p><i className="bi bi-telephone me-2"></i> {userProfile.phone}</p>
+                  </div>
+                  <div className="col-md-4">
+                    <p><i className="bi bi-shield me-2"></i> {userProfile.role}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Search and filter controls */}
         <div className="d-flex flex-wrap gap-2 mb-4">
+          <div className="search-container flex-grow-1">
+            <div className="input-group">
+              <span className="input-group-text">
+                <i className="bi bi-search"></i>
+              </span>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Search appointments..."
+                value={state.searchTerm}
+                onChange={(e) => setState(prev => ({ ...prev, searchTerm: e.target.value }))}
+              />
+            </div>
+          </div>
+          
+          <div className="filter-container">
+            <select
+              className="form-select"
+              value={state.filterStatus}
+              onChange={(e) => setState(prev => ({ ...prev, filterStatus: e.target.value }))}
+            >
+              <option value="all">All Statuses</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="cancelled">Cancelled</option>
+              <option value="no_show">No Show</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
+          
           <div className="ms-auto">
             <button 
               className="btn btn-primary d-flex align-items-center animate-pulse"
-              onClick={() => handleShowModal(state, setState)}
+              onClick={() => handleShowModal(apiService, state, setState)}
               disabled={state.loading}
             >
-              {/* ... button content ... */}
+              <i className="bi bi-plus-circle me-2"></i>
+              New Appointment
             </button>
           </div>
-          
-          {/* ... existing search and filter controls ... */}
         </div>
 
-        {/* Main content area */}
         {state.loading ? (
           <div className="text-center my-5">
             <div className="spinner-border text-primary" role="status">
@@ -119,23 +211,45 @@ const UserDashboard = () => {
           </div>
         ) : (
           <div className="row">
-            {/* Appointments table */}
             <div className="col-lg-6 col-md-12 mb-4">
               <div className="card h-100 animate-fade-in">
                 <div className="card-body">
                   <h3 className="card-title">Upcoming Appointments</h3>
                   <div className="table-responsive">
                     <table className="table table-hover">
-                      {/* ... table headers ... */}
+                      <thead>
+                        <tr>
+                          <th>Date</th>
+                          <th>Time</th>
+                          <th>Dentist</th>
+                          <th>Procedure</th>
+                          <th>Status</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
                       <tbody>
                         {state.filteredAppointments.length > 0 ? (
                           state.filteredAppointments.map((appointment) => (
                             <tr key={appointment.id} className="animate-row">
-                              {/* ... table cells ... */}
+                              <td>{moment(appointment.start).format('MMM D, YYYY')}</td>
+                              <td>{moment(appointment.start).format('h:mm A')}</td>
+                              <td>{appointment.dentist}</td>
+                              <td>{appointment.procedure}</td>
+                              <td>
+                                <span className={`badge ${
+                                  appointment.status === 'scheduled' ? 'bg-info' :
+                                  appointment.status === 'confirmed' ? 'bg-success' :
+                                  appointment.status === 'cancelled' ? 'bg-danger' :
+                                  appointment.status === 'no_show' ? 'bg-warning' :
+                                  'bg-secondary'
+                                }`}>
+                                  {appointment.status}
+                                </span>
+                              </td>
                               <td>
                                 <button 
                                   className="btn btn-sm btn-outline-primary me-2"
-                                  onClick={() => handleShowModal(state, setState, appointment)}
+                                  onClick={() => handleShowModal(apiService, state, setState, appointment)}
                                   disabled={state.loading}
                                 >
                                   <i className="bi bi-pencil me-1"></i>Reschedule
@@ -143,7 +257,7 @@ const UserDashboard = () => {
                                 {appointment.status !== 'cancelled' && (
                                   <button 
                                     className="btn btn-sm btn-outline-danger"
-                                    onClick={() => handleCancel(appointment.id, setState)}
+                                    onClick={() => handleCancel(appointment.id, apiService, setState)}
                                     disabled={state.loading}
                                   >
                                     <i className="bi bi-x-circle me-1"></i>Cancel
@@ -164,7 +278,6 @@ const UserDashboard = () => {
               </div>
             </div>
 
-            {/* Calendar */}
             <div className="col-lg-6 col-md-12">
               <div className="card h-100">
                 <div className="card-body">
@@ -183,12 +296,12 @@ const UserDashboard = () => {
                       onNavigate={onNavigate}
                       onView={onView}
                       eventPropGetter={eventStyleGetter}
-                      onSelectEvent={(event) => handleShowModal(state, setState, event)}
+                      onSelectEvent={(event) => handleShowModal(apiService, state, setState, event)}
                       selectable={true}
                       step={60}
                       timeslots={1}
                       defaultDate={new Date()}
-                      min={new Date(0, 0, 0, 9, 0, 0)}
+                      min={new Date(0, 0, 0, 8, 0, 0)}
                       max={new Date(0, 0, 0, 17, 0, 0)}
                       toolbar={true}
                     />
@@ -200,14 +313,13 @@ const UserDashboard = () => {
         )}
       </div>
 
-      {/* Modal */}
       {state.showModal && (
         <div className="modal-backdrop fade show" onClick={() => handleCloseModal(setState)}></div>
       )}
 
       <div className={`modal fade ${state.showModal ? 'show' : ''}`} 
            style={{ display: state.showModal ? 'block' : 'none' }}>
-        <div className="modal-dialog">
+        <div className="modal-dialog modal-dialog-centered">
           <div className="modal-content">
             <div className="modal-header">
               <h5 className="modal-title">
@@ -220,8 +332,108 @@ const UserDashboard = () => {
                 disabled={state.loading}
               ></button>
             </div>
-            <form onSubmit={(e) => handleSubmit(e, state, setState)}>
-              {/* ... modal form content ... */}
+            <form onSubmit={(e) => handleSubmit(e, apiService, state, setState, userProfile)}>
+              <div className="modal-body">
+                <div className="mb-3">
+                  <label className="form-label">Dentist</label>
+                  <select
+                    className="form-select"
+                    name="dentistId"
+                    value={state.currentAppointment?.dentistId || ''}
+                    onChange={(e) => handleInputChange(e, state, setState)}
+                    required
+                  >
+                    {state.dentists.map(dentist => (
+                      <option key={dentist.dentist_id} value={dentist.dentist_id}>
+                        Dr. {dentist.last_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="mb-3">
+                  <label className="form-label">Procedure</label>
+                  <select
+                    className="form-select"
+                    name="procedureId"
+                    value={state.currentAppointment?.procedureId || ''}
+                    onChange={(e) => handleInputChange(e, state, setState)}
+                    required
+                  >
+                    {state.procedures.map(procedure => (
+                      <option key={procedure.procedure_id} value={procedure.procedure_id}>
+                        {procedure.name} ({procedure.duration_minutes} mins)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="mb-3">
+                  <label className="form-label">Date</label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    name="date"
+                    value={state.currentAppointment?.date || moment().format('YYYY-MM-DD')}
+                    onChange={(e) => handleInputChange(e, state, setState)}
+                    min={moment().format('YYYY-MM-DD')}
+                    required
+                  />
+                </div>
+                
+                <div className="mb-3">
+                  <label className="form-label">Time Slot</label>
+                  <select
+                    className="form-select"
+                    name="hour"
+                    value={state.currentAppointment?.hour || 9}
+                    onChange={(e) => handleTimeChange(e, state, setState)}
+                    required
+                  >
+                    {state.availableHours.map(hour => (
+                      <option 
+                        key={hour.value} 
+                        value={hour.value}
+                        disabled={hour.disabled}
+                      >
+                        {hour.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="mb-3">
+                  <label className="form-label">Notes</label>
+                  <textarea
+                    className="form-control"
+                    name="notes"
+                    rows="3"
+                    value={state.currentAppointment?.notes || ''}
+                    onChange={(e) => handleInputChange(e, state, setState)}
+                  ></textarea>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => handleCloseModal(setState)}
+                  disabled={state.loading}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn btn-primary"
+                  disabled={state.loading}
+                >
+                  {state.loading ? (
+                    <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                  ) : (
+                    <span>{state.currentAppointment?.id ? 'Update' : 'Book'} Appointment</span>
+                  )}
+                </button>
+              </div>
             </form>
           </div>
         </div>

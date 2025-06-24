@@ -1,6 +1,15 @@
 import React, { useState } from 'react';
 import { useNavigate, Link, Navigate, useLocation } from 'react-router-dom';
-import apiService from '../../../services/api';
+import {
+  validateEmail,
+  handleEmailValidation,
+  checkPasswordMatch,
+  validateRequiredField,
+  calculatePasswordStrength,
+  loginUser,
+  registerUser,
+  forgotPassword
+} from './actions';
 import './Login.css';
 
 function Login({ isLoggedIn }) {
@@ -26,7 +35,6 @@ function Login({ isLoggedIn }) {
     agreeTerms: false,
     forgotEmail: ''
   });
-  
   const [errors, setErrors] = useState({});
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -35,57 +43,19 @@ function Login({ isLoggedIn }) {
     feedback: { suggestions: [] }
   });
 
-  const validateEmail = (email) => {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(String(email).toLowerCase());
-  };
-
-  const handleEmailValidation = (field, value) => {
-    if (!value) {
-      setErrors(prev => ({ ...prev, [field]: `${field.includes('reg') ? 'Registration email' : 'Email'} is required` }));
-      return false;
-    } else if (!validateEmail(value)) {
-      setErrors(prev => ({ ...prev, [field]: 'Please enter a valid email address' }));
-      return false;
-    } else {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-      return true;
-    }
-  };
-
-  const checkPasswordMatch = () => {
-    if (formData.regPassword && formData.regConfirm && 
-        formData.regPassword !== formData.regConfirm) {
-      setErrors(prev => ({ ...prev, passwordMatch: 'Passwords do not match' }));
-      return false;
-    } else {
-      setErrors(prev => ({ ...prev, passwordMatch: '' }));
-      return true;
-    }
-  };
-
-  const validateRequiredField = (field, displayName) => {
-    if (!formData[field]) {
-      setErrors(prev => ({ ...prev, [field]: `${displayName} is required` }));
-      return false;
-    }
-    setErrors(prev => ({ ...prev, [field]: '' }));
-    return true;
-  };
-
   const handleBlur = (e) => {
     const { id, value } = e.target;
     
     if (id === 'email' || id === 'regEmail' || id === 'forgotEmail') {
-      handleEmailValidation(id, value);
+      handleEmailValidation(id, value, setErrors);
     } else if (id === 'regConfirm') {
-      checkPasswordMatch();
+      checkPasswordMatch(formData, setErrors);
     } else if (id === 'firstName') {
-      validateRequiredField('firstName', 'First name');
+      validateRequiredField('firstName', 'First name', formData, setErrors);
     } else if (id === 'lastName') {
-      validateRequiredField('lastName', 'Last name');
+      validateRequiredField('lastName', 'Last name', formData, setErrors);
     } else if (id === 'phone') {
-      validateRequiredField('phone', 'Phone number');
+      validateRequiredField('phone', 'Phone number', formData, setErrors);
     }
   };
 
@@ -108,20 +78,12 @@ function Login({ isLoggedIn }) {
     
     if ((id === 'regPassword' || id === 'regConfirm') && 
         formData.regPassword && formData.regConfirm) {
-      checkPasswordMatch();
+      checkPasswordMatch({ ...formData, [id]: val }, setErrors);
     }
     
     if (id === 'regPassword') {
-      calculatePasswordStrength(value);
+      calculatePasswordStrength(value, setPasswordStrength);
     }
-  };
-
-  const calculatePasswordStrength = (password) => {
-    const score = Math.min(Math.floor(password.length / 3), 4);
-    setPasswordStrength({
-      score,
-      feedback: { suggestions: [] }
-    });
   };
 
   const getPasswordStrengthClass = () => {
@@ -132,102 +94,40 @@ function Login({ isLoggedIn }) {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    let isValid = true;
+    const result = await loginUser(
+      formData.email,
+      formData.password,
+      formData.rememberMe,
+      location,
+      setErrors,
+      setIsLoading
+    );
     
-    isValid = handleEmailValidation('email', formData.email) && isValid;
-    if (!formData.password) {
-      setErrors(prev => ({ ...prev, password: 'Password is required' }));
-      isValid = false;
-    }
-
-    if (isValid) {
-      setIsLoading(true);
-      try {
-        const response = await apiService.login({
-          email: formData.email,
-          password: formData.password,
-          rememberMe: formData.rememberMe
-        });
-        localStorage.setItem('token', response.data.token);
-        
-        // Use navigation state if available, otherwise default to '/user'
-        const from = location.state?.from?.pathname || '/user';
-        window.location.assign(from); // Full page reload for auth consistency
-      } catch (error) {
-        setErrors({ 
-          form: error.response?.data?.message || 'Invalid email or password' 
-        });
-      } finally {
-        setIsLoading(false);
-      }
+    if (result.success) {
+      window.location.assign(result.redirectTo);
     }
   };
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    let isValid = true;
-    
-    isValid = validateRequiredField('firstName', 'First name') && isValid;
-    isValid = validateRequiredField('lastName', 'Last name') && isValid;
-    isValid = handleEmailValidation('regEmail', formData.regEmail) && isValid;
-    isValid = validateRequiredField('phone', 'Phone number') && isValid;
-    
-    if (!formData.regPassword) {
-      setErrors(prev => ({ ...prev, regPassword: 'Password is required' }));
-      isValid = false;
-    }
-    isValid = checkPasswordMatch() && isValid;
-    
-    if (!formData.agreeTerms) {
-      setErrors(prev => ({ ...prev, agreeTerms: 'You must agree to the terms' }));
-      isValid = false;
-    }
-
-    if (isValid) {
-      setIsLoading(true);
-      try {
-        await apiService.register({
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          email: formData.regEmail,
-          password: formData.regPassword,
-          phone: formData.phone
-        });
-        setShowSuccessPopup(true);
-        setTimeout(() => {
-          setActiveTab('login');
-          setShowSuccessPopup(false);
-        }, 3000);
-      } catch (error) {
-        setErrors({ 
-          form: error.response?.data?.message || 'Registration failed. Please try again.' 
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    }
+    await registerUser(
+      formData,
+      setErrors,
+      setIsLoading,
+      setShowSuccessPopup,
+      setActiveTab
+    );
   };
 
   const handleForgotPassword = async (e) => {
     e.preventDefault();
-    const isValid = handleEmailValidation('forgotEmail', formData.forgotEmail);
-    
-    if (isValid) {
-      setIsLoading(true);
-      try {
-        await apiService.forgotPassword({ email: formData.forgotEmail });
-        setShowSuccessPopup(true);
-        setTimeout(() => {
-          setShowForgotPassword(false);
-          setShowSuccessPopup(false);
-          setFormData(prev => ({ ...prev, forgotEmail: '' }));
-        }, 3000);
-      } catch (error) {
-        setErrors({ forgotEmail: error.response?.data?.message || 'Failed to send reset link' });
-      } finally {
-        setIsLoading(false);
-      }
-    }
+    await forgotPassword(
+      formData.forgotEmail,
+      setErrors,
+      setIsLoading,
+      setShowSuccessPopup,
+      setShowForgotPassword
+    );
   };
 
   if (isLoggedIn) {
@@ -504,7 +404,7 @@ function Login({ isLoggedIn }) {
                             value={formData.regPassword}
                             onChange={(e) => {
                               handleChange(e);
-                              calculatePasswordStrength(e.target.value);
+                              calculatePasswordStrength(e.target.value, setPasswordStrength);
                             }}
                             required
                           />

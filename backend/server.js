@@ -71,7 +71,7 @@ async function initDB() {
         email VARCHAR(100) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
         phone VARCHAR(20),
-        role VARCHAR(20) DEFAULT 'patient',
+        role VARCHAR(20) DEFAULT 'Patient',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -85,7 +85,10 @@ async function initDB() {
 // Routes
 app.use('/api/auth', require('./routes/authRoutes')); // Add this line
 app.use('/api/dentists', require('./routes/dentistRoutes'));
-
+app.use('/api/patients', require('./routes/patientRoutes'));
+app.use('/api/users', require('./routes/userRoutes')); 
+app.use('/api/appointments', require('./routes/appointmentRoutes')); 
+ 
 // Health Check
 app.get('/api/health', (_, res) => res.status(200).json({ status: 'ok' }));
 
