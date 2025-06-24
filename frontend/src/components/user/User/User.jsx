@@ -107,9 +107,9 @@ const UserDashboard = () => {
               </button>
               {state.showProfileDropdown && (
                 <div className="dropdown-menu dropdown-menu-end show">
-                  <button className="dropdown-item" onClick={handleEditProfile}>
+                  {/* <button className="dropdown-item" onClick={handleEditProfile}>
                     <i className="bi bi-person me-2"></i>Edit Profile
-                  </button>
+                  </button> */}
                   <button className="dropdown-item" onClick={() => handleLogout(apiService)}>
                     <i className="bi bi-box-arrow-right me-2"></i>Logout
                   </button>
