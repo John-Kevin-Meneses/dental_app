@@ -23,11 +23,11 @@ router.patch('/:id/cancel', authorize('patient'), cancelAppointment);
 // ========== DENTIST ROUTES ==========
 router.get('/availability/:dentistId/:date', authorize('dentist', 'admin'), getDentistAvailability);
 
-// ========== ADMIN & DENTIST SHARED ROUTES ==========
+// ========== SHARED ROUTES ==========
 router.route('/:id')
-  .get(authorize('admin', 'dentist'), getAppointment)
-  .put(authorize('admin', 'dentist'), updateAppointment)
-  .delete(authorize('admin'), deleteAppointment);
+  .get(authorize('admin', 'dentist', 'patient'), getAppointment)
+  .put(authorize('admin', 'dentist', 'patient'), updateAppointment)
+  .delete(authorize('admin', 'patient'), deleteAppointment);
 
 // ========== Future Admin-Only Routes (example placeholder) ==========
 router.use(authorize('admin'));
