@@ -1,5 +1,6 @@
 import moment from 'moment';
 
+// Generate available hours (8 AM to 5 PM)
 export const generateAvailableHours = () => {
   return Array.from({ length: 10 }, (_, i) => i + 8).map(hour => ({
     value: hour,
@@ -8,13 +9,15 @@ export const generateAvailableHours = () => {
   }));
 };
 
+// Normalize raw appointment data from API
 export const processAppointment = (appt) => {
   try {
     const dentistName = appt.dentist_name || 
       (appt.first_name ? `${appt.first_name} ${appt.last_name}` : 'Unknown Dentist');
 
-    const startDateTime = new Date(`${appt.appointment_date.split('T')[0]}T${appt.start_time}`);
-    const endDateTime = new Date(`${appt.appointment_date.split('T')[0]}T${appt.end_time}`);
+    const dateOnly = appt.appointment_date.split('T')[0];
+    const startDateTime = new Date(`${dateOnly}T${appt.start_time}`);
+    const endDateTime = new Date(`${dateOnly}T${appt.end_time}`);
 
     return {
       id: appt.appointment_id,
@@ -26,7 +29,7 @@ export const processAppointment = (appt) => {
       procedure: appt.procedure_name,
       procedureId: appt.procedure_id,
       status: appt.status || 'scheduled',
-      date: appt.appointment_date.split('T')[0],
+      date: dateOnly,
       startTime: appt.start_time,
       endTime: appt.end_time,
       patientId: appt.patient_id,
@@ -40,6 +43,7 @@ export const processAppointment = (appt) => {
   }
 };
 
+// Calculate appointment end time based on start + duration
 const calculateEndTime = (startTime, durationMinutes) => {
   const [hours, minutes] = startTime.split(':').map(Number);
   const startDate = new Date();
@@ -48,6 +52,7 @@ const calculateEndTime = (startTime, durationMinutes) => {
   return `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}:00`;
 };
 
+// Fetch all required initial data
 export const fetchInitialData = async (apiService, setState, setUserProfile) => {
   try {
     setState(prev => ({ ...prev, loading: true, profileLoading: true }));
@@ -59,8 +64,8 @@ export const fetchInitialData = async (apiService, setState, setUserProfile) => 
       apiService.getProcedures()
     ]);
 
+    // Profile
     if (!profileRes.success) throw new Error(profileRes.message || 'Failed to fetch profile');
-
     const profileData = profileRes.data.user;
     setUserProfile({
       name: `${profileData.patient?.first_name || ''} ${profileData.patient?.last_name || ''}`.trim(),
@@ -71,13 +76,18 @@ export const fetchInitialData = async (apiService, setState, setUserProfile) => 
       patientId: profileData.patient_id || null
     });
 
+    // Appointments
     if (!appointmentsRes.success) throw new Error(appointmentsRes.message || 'Failed to fetch appointments');
-    const appointmentsData = Array.isArray(appointmentsRes.data) ? appointmentsRes.data : appointmentsRes.data?.appointments || [];
-    const appointments = appointmentsData.map(processAppointment).filter(appt => appt !== null);
+    const appointmentsRaw = Array.isArray(appointmentsRes.data?.data)
+    ? appointmentsRes.data.data
+    : [];
+    const appointments = appointmentsRaw.map(processAppointment).filter(Boolean);
+    console.log('Appointments:', appointments);
+    console.log('Appointments Raw:', appointmentsRes.data);
 
+    // Dentists
     if (!dentistsRes.success) throw new Error(dentistsRes.message || 'Failed to fetch dentists');
-    const dentistsData = dentistsRes.data.data || [];
-    const dentists = dentistsData.map(d => ({
+    const dentists = (dentistsRes.data.data || []).map(d => ({
       dentist_id: d.dentist_id,
       first_name: d.first_name,
       last_name: d.last_name,
@@ -86,9 +96,9 @@ export const fetchInitialData = async (apiService, setState, setUserProfile) => 
       email: d.email
     }));
 
+    // Procedures
     if (!proceduresRes.success) throw new Error(proceduresRes.message || 'Failed to fetch procedures');
-    const proceduresData = proceduresRes.data.data || [];
-    const procedures = proceduresData.map(p => ({
+    const procedures = (proceduresRes.data.data || []).map(p => ({
       procedure_id: p.procedure_id,
       name: p.name,
       duration_minutes: p.duration_minutes || 30,
@@ -101,18 +111,17 @@ export const fetchInitialData = async (apiService, setState, setUserProfile) => 
       filteredAppointments: appointments,
       dentists,
       procedures,
+      availableHours: generateAvailableHours(),
       loading: false,
-      profileLoading: false,
-      availableHours: generateAvailableHours()
+      profileLoading: false
     }));
-
   } catch (error) {
     console.error('Failed to fetch data:', error);
-    setState(prev => ({ 
-      ...prev, 
-      loading: false, 
+    setState(prev => ({
+      ...prev,
+      loading: false,
       profileLoading: false,
-      error: error.message 
+      error: error.message
     }));
 
     if (error.message.includes('401')) {
@@ -122,27 +131,25 @@ export const fetchInitialData = async (apiService, setState, setUserProfile) => 
   }
 };
 
+// Filter appointments based on search and status
 export const filterAppointments = (state, setState) => {
   const filtered = state.appointments.filter(appt => {
-    const matchesSearch = state.searchTerm 
+    const matchesSearch = state.searchTerm
       ? `${appt.dentist} ${appt.procedure} ${appt.notes}`.toLowerCase().includes(state.searchTerm.toLowerCase())
       : true;
-
-    const matchesStatus = state.filterStatus === 'all' 
-      ? true 
-      : appt.status === state.filterStatus;
-
+    const matchesStatus = state.filterStatus === 'all' || appt.status === state.filterStatus;
     return matchesSearch && matchesStatus;
   });
 
   setState(prev => ({ ...prev, filteredAppointments: filtered }));
 };
 
+// Show modal for creating or editing an appointment
 export const handleShowModal = async (apiService, state, setState, appointment = null) => {
   try {
     if (!appointment) {
       const now = new Date();
-      const defaultHour = now.getHours() < 17 ? (now.getHours() > 8 ? now.getHours() : 9) : 9;
+      const defaultHour = now.getHours() < 17 ? Math.max(now.getHours(), 9) : 9;
 
       setState(prev => ({
         ...prev,
@@ -171,6 +178,7 @@ export const handleShowModal = async (apiService, state, setState, appointment =
     }
 
     const currentAppointment = processAppointment(apptRes.data);
+
     const dentists = (dentistsRes.data.data || []).map(d => ({
       dentist_id: d.dentist_id,
       first_name: d.first_name,
@@ -179,6 +187,7 @@ export const handleShowModal = async (apiService, state, setState, appointment =
       phone: d.phone,
       email: d.email
     }));
+
     const procedures = (proceduresRes.data.data || []).map(p => ({
       procedure_id: p.procedure_id,
       name: p.name,
@@ -194,17 +203,18 @@ export const handleShowModal = async (apiService, state, setState, appointment =
       procedures,
       availableHours: generateAvailableHours()
     }));
-
   } catch (error) {
     console.error('Failed to prepare modal:', error);
     setState(prev => ({ ...prev, error: error.message }));
   }
 };
 
+// Close modal
 export const handleCloseModal = (setState) => {
   setState(prev => ({ ...prev, showModal: false, currentAppointment: null }));
 };
 
+// Submit form to create or update appointment
 export const handleSubmit = async (e, apiService, state, setState, userProfile) => {
   e.preventDefault();
 
@@ -212,38 +222,41 @@ export const handleSubmit = async (e, apiService, state, setState, userProfile) 
     const { currentAppointment } = state;
     if (!currentAppointment) throw new Error('No appointment data');
 
+    const { hour } = currentAppointment;
+    if (typeof hour !== 'number' || isNaN(hour)) {
+      throw new Error('Invalid or missing hour in appointment');
+    }
+
     const procedure = state.procedures.find(p => p.procedure_id === currentAppointment.procedureId);
-    const duration = procedure ? procedure.duration_minutes : 30;
+    const duration = procedure?.duration_minutes || 30;
+
+    const startTime = `${hour.toString().padStart(2, '0')}:00:00`;
 
     const appointmentData = {
-      patient_id: userProfile.patientId,
-      dentist_id: currentAppointment.dentistId,
-      procedure_id: currentAppointment.procedureId,
-      appointment_date: currentAppointment.date,
-      start_time: `${currentAppointment.hour.toString().padStart(2, '0')}:00:00`,
-      end_time: calculateEndTime(`${currentAppointment.hour}:00:00`, duration),
-      status: currentAppointment.status || 'scheduled',
+      patientId: userProfile.patientId,
+      dentistId: currentAppointment.dentistId,
+      procedureId: currentAppointment.procedureId,
+      date: currentAppointment.date,
+      startTime,
+      endTime: calculateEndTime(startTime, duration),
       notes: currentAppointment.notes || ''
     };
 
     setState(prev => ({ ...prev, loading: true }));
 
-    let result;
-    if (currentAppointment.id) {
-      result = await apiService.updateAppointment(currentAppointment.id, appointmentData);
-    } else {
-      result = await apiService.createAppointment(appointmentData);
-    }
+    const result = currentAppointment.id
+      ? await apiService.updateAppointment(currentAppointment.id, appointmentData)
+      : await apiService.createAppointment(appointmentData);
 
     if (!result.success) throw new Error(result.message);
 
     const appointmentsRes = await apiService.getAppointments();
     if (!appointmentsRes.success) throw new Error(appointmentsRes.message);
 
-    const appointments = (Array.isArray(appointmentsRes.data) 
-      ? appointmentsRes.data 
+    const appointments = (Array.isArray(appointmentsRes.data)
+      ? appointmentsRes.data
       : appointmentsRes.data?.appointments || []
-    ).map(processAppointment).filter(appt => appt !== null);
+    ).map(processAppointment).filter(Boolean);
 
     setState(prev => ({
       ...prev,
@@ -254,38 +267,15 @@ export const handleSubmit = async (e, apiService, state, setState, userProfile) 
       loading: false
     }));
 
+    window.location.reload();
   } catch (error) {
     console.error('Failed to save appointment:', error);
-    setState(prev => ({ 
-      ...prev, 
-      loading: false,
-      error: error.message 
-    }));
+    setState(prev => ({ ...prev, loading: false, error: error.message }));
   }
 };
 
-export const handleInputChange = (e, state, setState) => {
-  const { name, value } = e.target;
-  setState(prev => ({
-    ...prev,
-    currentAppointment: {
-      ...prev.currentAppointment,
-      [name]: value
-    }
-  }));
-};
 
-export const handleTimeChange = (e, state, setState) => {
-  const hour = parseInt(e.target.value, 10);
-  setState(prev => ({
-    ...prev,
-    currentAppointment: {
-      ...prev.currentAppointment,
-      hour: isNaN(hour) ? 9 : hour
-    }
-  }));
-};
-
+// Cancel appointment
 export const handleCancel = async (id, apiService, setState) => {
   if (!window.confirm('Are you sure you want to cancel this appointment?')) return;
 
@@ -297,10 +287,10 @@ export const handleCancel = async (id, apiService, setState) => {
     const appointmentsRes = await apiService.getAppointments();
     if (!appointmentsRes.success) throw new Error(appointmentsRes.message);
 
-    const appointments = (Array.isArray(appointmentsRes.data) 
-      ? appointmentsRes.data 
+    const appointments = (Array.isArray(appointmentsRes.data)
+      ? appointmentsRes.data
       : appointmentsRes.data?.appointments || []
-    ).map(processAppointment).filter(appt => appt !== null);
+    ).map(processAppointment).filter(Boolean);
 
     setState(prev => ({
       ...prev,
@@ -309,16 +299,14 @@ export const handleCancel = async (id, apiService, setState) => {
       loading: false
     }));
 
+    window.location.reload();
   } catch (error) {
     console.error('Failed to cancel appointment:', error);
-    setState(prev => ({ 
-      ...prev, 
-      loading: false,
-      error: error.message 
-    }));
+    setState(prev => ({ ...prev, loading: false, error: error.message }));
   }
 };
 
+// Logout user
 export const handleLogout = async (apiService) => {
   try {
     await apiService.logout();
@@ -330,6 +318,7 @@ export const handleLogout = async (apiService) => {
   }
 };
 
+// Event styling for calendar
 export const eventStyleGetter = (event) => {
   const statusColors = {
     scheduled: '#17a2b8',
@@ -352,20 +341,42 @@ export const eventStyleGetter = (event) => {
   };
 };
 
+// Load single appointment
 export const getAppointment = async (apiService, appointmentId, setState) => {
   try {
     setState(prev => ({ ...prev, loading: true }));
     const result = await apiService.getAppointment(appointmentId);
-
     if (!result.success) throw new Error(result.message);
 
     const appointment = processAppointment(result.data);
     setState(prev => ({ ...prev, loading: false }));
     return appointment;
-
   } catch (error) {
     console.error('Failed to fetch appointment:', error);
     setState(prev => ({ ...prev, loading: false, error: error.message }));
     return null;
   }
+};
+
+// Form field handlers
+export const handleInputChange = (e, state, setState) => {
+  const { name, value } = e.target;
+  setState(prev => ({
+    ...prev,
+    currentAppointment: {
+      ...prev.currentAppointment,
+      [name]: value
+    }
+  }));
+};
+
+export const handleTimeChange = (e, state, setState) => {
+  const hour = parseInt(e.target.value, 10);
+  setState(prev => ({
+    ...prev,
+    currentAppointment: {
+      ...prev.currentAppointment,
+      hour: isNaN(hour) ? 9 : hour
+    }
+  }));
 };
