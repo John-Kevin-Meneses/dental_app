@@ -114,9 +114,14 @@ npm run dev
 Create a `.env` file in the `backend/` directory with:
 
 ```env
-MONGO_URI=your_mongodb_connection
-JWT_SECRET=your_jwt_secret
-PORT=5000
+
+DATABASE_URL=postgresql://postgres.ahvrhmwxuhwwrdwpldfl:DL3_t-@Paut8pGj@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres
+FRONTEND_URL=http://localhost:5173
+JWT_SECRET=98caff96f9ac5203f14368fe66c8713d038ad0fca0fc6e8047ad5a87e636313d
+JWT_EXPIRE=1h
+REACT_APP_API_BASE_URL=https://dental-app-backend-vz9d.onrender.com/api
+VITE_API_BASE_URL=https://dental-app-backend-vz9d.onrender.com/api
+
 ```
 
 ---
@@ -135,5 +140,5 @@ Licensed under the [MIT License](LICENSE).
 
 ## 📬 Contact
 
-- Email: your-email@example.com
-- GitHub: [@yourusername](https://github.com/yourusername)
+- Email: jkevinmeneses@gmail.com
+- GitHub: [John Kevin Meneses](https://github.com/John-Kevin-Meneses)
