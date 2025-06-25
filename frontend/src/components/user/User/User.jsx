@@ -223,6 +223,7 @@ const UserDashboard = () => {
                         <th>Time</th>
                         <th>Dentist</th>
                         <th>Procedure</th>
+                        <th>Notes</th>
                         <th>Status</th>
                         <th>Actions</th>
                       </tr>
@@ -235,6 +236,7 @@ const UserDashboard = () => {
                             <td>{moment(appointment.start).format('h:mm A')}</td>
                             <td>{appointment.dentist}</td>
                             <td>{appointment.procedure}</td>
+                            <td>{appointment.notes}</td>
                             <td>
                               <span className={`badge ${
                                 appointment.status === 'scheduled' ? 'bg-info' :
