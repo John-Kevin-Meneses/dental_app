@@ -86,7 +86,7 @@ dental_app/
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/dental_app.git
+git clone https://github.com/John-Kevin-Meneses/dental_app.git
 cd dental_app
 ```
 
