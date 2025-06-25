@@ -266,7 +266,7 @@ function Login({ isLoggedIn }) {
                             value={formData.password}
                             onChange={handleChange}
                             required
-                            autoComplete="current-password"
+                            autoComplete="off"
                           />
                           <i
                             className={`bi bi-eye${passwordVisible.login ? '-slash' : ''} toggle-icon`}
@@ -408,7 +408,7 @@ function Login({ isLoggedIn }) {
                               calculatePasswordStrength(e.target.value, setPasswordStrength);
                             }}
                             required
-                            autoComplete="new-password"
+                            autoComplete="off"
                           />
                           <i
                             className={`bi bi-eye${passwordVisible.register ? '-slash' : ''} toggle-icon`}
@@ -441,7 +441,7 @@ function Login({ isLoggedIn }) {
                             onBlur={handleBlur}
                             className={errors.passwordMatch ? 'input-error' : ''}
                             required
-                            autoComplete="new-password"
+                            autoComplete="off"
                           />
                           <i
                             className={`bi bi-eye${passwordVisible.confirm ? '-slash' : ''} toggle-icon`}
